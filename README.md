@@ -56,7 +56,7 @@ See [source credits](src/CREDITS.md).
 
 ## Art direction controls
 
-Click the settings icon beside Replay at the upper right to open **Type & scene**. The panel is hidden initially and Escape closes it. The hero/headline dropdown offers Space Grotesk SemiBold (default), Syne SemiBold, Geist Bold, Manrope SemiBold, Outfit Medium, Bodoni Moda SemiBold, Azeret Mono SemiBold, Chakra Petch SemiBold, Unbounded Medium, Space Mono Bold, and Oxanium SemiBold. Small labels can use IBM Plex Mono or Geist. All choices are bundled Glyph assets, including fracture-ready display outlines. Font changes preserve the animation position. Use Replay to compare their fracture behavior.
+Click the settings icon beside Replay at the upper right to open **Type & scene**. The panel is hidden initially and Escape closes it. The hero/headline dropdown offers JetBrains Mono SemiBold (default), Space Grotesk SemiBold, Syne SemiBold, Geist Bold, Manrope SemiBold, Outfit Medium, Bodoni Moda SemiBold, Azeret Mono SemiBold, Chakra Petch SemiBold, Unbounded Medium, Space Mono Bold, and Oxanium SemiBold. Small labels can use IBM Plex Mono or Geist. All choices are bundled Glyph assets, including fracture-ready display outlines. Font changes preserve the animation position. Use Replay to compare their fracture behavior.
 
 The panel also controls background colors, shape, flow speed, softness and grain; rear text size, position, depth, color and opacity; metal objects and orbit speed; rear text starts off by default; upright grid with crosshair spacing; HDR environment and rotation; glass refraction, dispersion, roughness, tint, optical depth, back-face pass, bevel, extrusion and tilt; fracture seed, cell count, impulse, and the opening hold before the break (0.7 seconds by default). Timing changes keep the later choreography and scrubber synchronized. The orange background color also colors the Breaking Changes heading. `src/settings.tsx` holds the defaults. The live choices last for the current page session. The visible scene continues to use Glyph; the development panel itself is Leva's standard HTML UI.
 
@@ -68,7 +68,7 @@ Open the settings icon, then **Camera**. **Follow cursor** provides adjustable h
 
 ## Font exploration
 
-Compare 20 additional display and code faces in the self-contained [font specimen sheet](docs/font-specimens.html). The [research notes](docs/font-research.md) include official sources, license checks, and glass geometry considerations. The five shortlisted faces are now included in the scene’s Display font dropdown alongside the original six choices.
+Compare 20 additional display and code faces in the self-contained [font specimen sheet](docs/font-specimens.html). The [research notes](docs/font-research.md) include official sources, license checks, and glass geometry considerations. JetBrains Mono and the five shortlisted faces are now included in the scene’s Display font dropdown alongside the original six choices.
 
 ## Contributing and deployment
 

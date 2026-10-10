@@ -31,3 +31,5 @@ The demo library supplied by the user was the starting reference for the WebGPU 
 - [Space Mono](https://github.com/google/fonts/tree/main/ofl/spacemono), SIL Open Font License. Weight 700 baked with Glyph outlines. License: `assets/SpaceMono-OFL.txt` and `public/licenses/SpaceMono-OFL.txt`.
 
 - [Oxanium](https://github.com/google/fonts/tree/main/ofl/oxanium), SIL Open Font License. Weight 600 baked with Glyph outlines. License: `assets/Oxanium-OFL.txt` and `public/licenses/Oxanium-OFL.txt`.
+
+- [JetBrains Mono](https://github.com/google/fonts/tree/main/ofl/jetbrainsmono), SIL Open Font License. Weight 600 baked with Glyph outlines. License: `assets/JetBrainsMono-OFL.txt` and `public/licenses/JetBrainsMono-OFL.txt`.

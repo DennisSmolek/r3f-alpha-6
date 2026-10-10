@@ -20,7 +20,7 @@ function capArea(geometry: ExtrudeGeometry) {
   return area;
 }
 
-for (const face of ['SpaceGrotesk-SemiBold', 'Syne-SemiBold', 'Geist-Bold', 'Manrope-SemiBold', 'Outfit-Medium', 'BodoniModa-SemiBold', 'AzeretMono-SemiBold', 'ChakraPetch-SemiBold', 'Unbounded-Medium', 'SpaceMono-Bold', 'Oxanium-SemiBold']) test(`${face}: renderer fractures conserve the actual Glyph silhouettes and letter holes`, async () => {
+for (const face of ['SpaceGrotesk-SemiBold', 'Syne-SemiBold', 'Geist-Bold', 'Manrope-SemiBold', 'Outfit-Medium', 'BodoniModa-SemiBold', 'AzeretMono-SemiBold', 'ChakraPetch-SemiBold', 'Unbounded-Medium', 'SpaceMono-Bold', 'Oxanium-SemiBold', 'JetBrainsMono-SemiBold']) test(`${face}: renderer fractures conserve the actual Glyph silhouettes and letter holes`, async () => {
   await glyph.init();
   const bytes = await readFile(new URL(`./assets/${face}.font.glb`, import.meta.url));
   const font = await glyph.fontFace(new Blob([bytes]), { format: slug }).load();

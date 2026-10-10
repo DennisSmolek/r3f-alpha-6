@@ -39,7 +39,7 @@ export function useSceneSettings() {
       'Reset camera': button(() => actions.current.resetCamera()),
     }),
     Typography: folder({
-      displayFont: { label: 'Display font', value: 'Space Grotesk', options: ['Space Grotesk', 'Syne', 'Geist', 'Manrope', 'Outfit', 'Bodoni Moda', 'Azeret Mono', 'Chakra Petch', 'Unbounded', 'Space Mono', 'Oxanium'] },
+      displayFont: { label: 'Display font', value: 'JetBrains Mono', options: ['JetBrains Mono', 'Space Grotesk', 'Syne', 'Geist', 'Manrope', 'Outfit', 'Bodoni Moda', 'Azeret Mono', 'Chakra Petch', 'Unbounded', 'Space Mono', 'Oxanium'] },
       detailFont: { label: 'Small labels', value: 'IBM Plex Mono', options: ['IBM Plex Mono', 'Geist'] },
     }, { collapsed: true }),
     Background: folder({

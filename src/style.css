@@ -1,0 +1,53 @@
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; width: 100%; min-height: 100%; }
+body { background: #0b0b10; font-family: system-ui, sans-serif; }
+.announcement { position: relative; width: 100%; height: 100svh; min-height: 620px; overflow: hidden; color: #d1d0cd; background: #0b0b10; }
+.announcement.is-light { color: #24221f; }
+.announcement > div:first-child:has(canvas) { position: absolute !important; inset: 0; }
+.semantic-copy, .hit-area span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.playback-controls { position: absolute; top: 27px; right: 23px; display: flex; gap: 3px; }
+.playback-controls button { width: 37px; height: 37px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; opacity: .62; }
+.playback-controls button:hover { background: #88888820; opacity: 1; }
+.playback-controls button:disabled { opacity: .25; cursor: default; }
+.playback-controls svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
+a { color: inherit; text-decoration: none; }
+.hit-area { display: block; border-radius: 4px; }
+.hit-area:hover { background: #8888880e; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid #ed582c; outline-offset: 5px; }
+.logo-link { position: absolute; top: calc(78.6% - 28px); left: calc(50% - 28px); width: 56px; height: 56px; }
+.primary-links { position: absolute; top: calc(85.3% - 22px); left: calc(50% - 97px); display: flex; gap: 14px; }
+.primary-links a { width: 90px; height: 44px; }
+.timeline { position: absolute; top: calc(90.7% - 12px); left: calc(50% - 113px); width: 226px; height: 24px; margin: 0; appearance: none; background: transparent; cursor: ew-resize; }
+.timeline::-webkit-slider-runnable-track { height: 2px; background: transparent; }
+.timeline::-webkit-slider-thumb { appearance: none; width: 9px; height: 9px; margin-top: -3.5px; border-radius: 50%; background: transparent; }
+.timeline:hover::-webkit-slider-thumb, .timeline:focus-visible::-webkit-slider-thumb { background: #ed582c; }
+.timeline::-moz-range-track { background: transparent; }
+.timeline::-moz-range-thumb { border: none; background: transparent; }
+.credits { position: absolute; bottom: 10px; left: calc(50% - 228px); width: 456px; display: grid; grid-template-columns: 92px 132px 44px 228px; }
+.credits a { height: 38px; }
+.credits a:nth-child(2) { margin-left: 27px; margin-right: 43px; }
+.credits a:nth-child(3) { margin-left: -3px; width: 62px; }
+.credits a:nth-child(4) { margin-left: 33px; width: 138px; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; background: #0b0b10; transition: opacity .3s; }
+.loading span { width: 24px; height: 24px; border: 1px solid #ffffff22; border-top-color: #ed582c; border-radius: 50%; animation: spin 1.5s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.is-fallback { background: #f3f1e9; color: #24221f; }
+.fallback-copy { text-align: center; padding: 30px 24px; }
+.eyebrow { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
+.fallback-canvas { margin-top: 16vh; font-size: clamp(40px, 10vw, 120px); font-weight: 600; letter-spacing: -.07em; }
+.fallback-copy h2 { font-size: 26px; margin-top: 35px; }
+.fallback-copy h2 span { color: #ed582c; }
+.fallback-copy h3 { font-size: 38px; margin: 0; }
+.fallback-message { margin: 24px auto; max-width: 340px; color: #77716a; font-size: 13px; line-height: 1.5; }
+.is-fallback .hit-area span { position: static; width: auto; height: auto; clip: auto; margin: 0; overflow: visible; }
+.is-fallback .hit-area { display: grid; place-items: center; font-size: 13px; }
+.is-fallback .timeline, .is-fallback .playback-controls { display: none; }
+@media (max-width: 650px) {
+  .playback-controls { top: 67px; right: 15px; }
+  .timeline { width: 190px; left: calc(50% - 95px); }
+  .credits { left: calc(50% - 167px); width: 334px; grid-template-columns: 68px 90px 36px 140px; }
+  .credits a:nth-child(2) { margin-left: 18px; margin-right: 24px; }
+  .credits a:nth-child(3) { margin-left: -9px; width: 45px; }
+  .credits a:nth-child(4) { margin-left: 14px; width: 120px; }
+}
+@media (prefers-reduced-motion: reduce) { .loading span { animation: none; } }

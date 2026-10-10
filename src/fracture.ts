@@ -1,4 +1,5 @@
 import { ExtrudeGeometry, Path, Shape, ShapePath, Vector2, Vector3 } from 'three/webgpu';
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import polygonClipping, { type Pair, type Polygon } from 'polygon-clipping';
 import type { GlyphLayoutInspection } from '@pmndrs/glyph';
 
@@ -24,7 +25,14 @@ export function glyphShapes(layout: GlyphLayoutInspection, index: number) {
     }
     path.currentPath?.closePath();
   }
-  return path.toShapes();
+  const shapes = path.toShapes();
+  if (!shapes.length) return shapes;
+  // Variable fonts can retain overlapping or self-intersecting contours. Normalize before extrusion.
+  return polygonShapes(polygonClipping.union(shapes.map(shape => {
+    const points = shape.extractPoints(32);
+    return [ring(points.shape), ...points.holes.map(ring)];
+  })));
+
 }
 
 function halfPlane(polygon: Pair[], nx: number, ny: number, distance: number) {
@@ -48,30 +56,50 @@ function ring(points: Vector2[]): Pair[] {
   return result;
 }
 
-export function extrude(shapes: Shape[], bevel = 0.028) {
-  const geometry = new ExtrudeGeometry(shapes, {
-    depth: 0.09, steps: 1, bevelEnabled: bevel > 0,
-    bevelSegments: 3, bevelSize: bevel, bevelThickness: bevel, curveSegments: 10,
+function polygonShapes(polygons: Polygon[]) {
+  return polygons.map(([outer, ...holes]) => {
+    const shape = new Shape(outer.map(([x, y]) => new Vector2(x, y)));
+    shape.holes = holes.map(hole => new Path(hole.map(([x, y]) => new Vector2(x, y))));
+    return shape;
   });
+}
+
+export function extrude(shapes: Shape[], bevel = 0.012, depth = 0.22, smooth = true) {
+  const geometry = new ExtrudeGeometry(shapes, {
+    depth, steps: 1, bevelEnabled: bevel > 0,
+    bevelSegments: 8, bevelSize: bevel, bevelThickness: bevel, curveSegments: 32,
+  });
+  if (smooth) {
+    // Unit-size font outlines need finer welding than the normal helper's 0.01 grid.
+    geometry.scale(100, 100, 100);
+    toCreasedNormals(geometry, Math.PI / 3);
+    geometry.scale(0.01, 0.01, 0.01);
+  }
   geometry.computeBoundingBox();
   return geometry;
 }
 
 /** Intersect each Voronoi cell with the full letter, preserving counters and disconnected islands. */
-export function fractureGlyph(shapes: Shape[], seed: number) {
+export function fractureGlyph(shapes: Shape[], seed: number, options: { cells?: number; depth?: number } = {}) {
   const rng = random(seed);
   const polygons: Polygon[] = shapes.map(shape => {
-    const points = shape.extractPoints(10);
+    const points = shape.extractPoints(32);
     return [ring(points.shape), ...points.holes.map(ring)];
   });
   const points = polygons.flat(2);
   const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
   const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const sites: Pair[] = Array.from({ length: 11 }, () => [
-    minX + rng() * (maxX - minX),
-    minY + rng() * (maxY - minY),
-  ]);
+  const impact: Pair = [minX + (maxX - minX) * 0.58, minY + (maxY - minY) * 0.52];
+  // A single impact field spans the word. Dense splinters mix with large, irregular cells.
+  const sites: Pair[] = Array.from({ length: options.cells ?? 11 }, (_, i) => {
+    if (i % 3 === 0) {
+      const angle = rng() * Math.PI * 2, radius = rng() ** 1.7;
+      return [impact[0] + Math.cos(angle) * radius * (maxX - minX) * 0.35,
+        impact[1] + Math.sin(angle) * radius * (maxY - minY) * 0.6];
+    }
+    return [minX + rng() * (maxX - minX), minY + rng() * (maxY - minY)];
+  });
   return sites.flatMap((site, i) => {
     let cell: Pair[] = [[minX - 1, minY - 1], [maxX + 1, minY - 1], [maxX + 1, maxY + 1], [minX - 1, maxY + 1]];
     sites.forEach((other, j) => {
@@ -82,14 +110,17 @@ export function fractureGlyph(shapes: Shape[], seed: number) {
     if (cell.length < 3) return [];
     const clipped = polygonClipping.intersection(polygons, [[...cell, cell[0]]]);
     if (!clipped.length) return [];
-    const pieces = clipped.map(([outer, ...holes]) => {
-      const shape = new Shape(outer.map(([x, y]) => new Vector2(x, y)));
-      shape.holes = holes.map(hole => new Path(hole.map(([x, y]) => new Vector2(x, y))));
-      return shape;
+    return polygonShapes(clipped).map(piece => {
+      const geometry = extrude([piece], 0.0008, options.depth ?? 0.22, false);
+      const center = geometry.boundingBox!.getCenter(new Vector3());
+      geometry.translate(-center.x, -center.y, -center.z);
+      const distance = Math.hypot(center.x - impact[0], center.y - impact[1]);
+      return {
+        geometry, center,
+        velocity: new Vector3((center.x - impact[0]) * 0.65 + (rng() - 0.5) * 0.65, 0.15 + rng() * 1.3, (rng() - 0.5) * 1.7),
+        spin: new Vector3((rng() - 0.5) * 7, (rng() - 0.5) * 8, (rng() - 0.5) * 6),
+        delay: Math.min(0.28, distance / Math.max(maxX - minX, 0.01) * 0.35) + rng() * 0.035,
+      };
     });
-    const geometry = extrude(pieces, 0.0015);
-    const center = geometry.boundingBox!.getCenter(new Vector3());
-    geometry.translate(-center.x, -center.y, -center.z);
-    return [{ geometry, center, velocity: new Vector3((rng() - 0.5) * 1.7, 0.35 + rng() * 1.6, (rng() - 0.5) * 2), spin: new Vector3((rng() - 0.5) * 6, (rng() - 0.5) * 7, (rng() - 0.5) * 5), delay: rng() * 0.18 }];
   });
 }

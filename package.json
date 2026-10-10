@@ -4,18 +4,29 @@
   "version": "0.0.0",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
-  "scripts": { "dev": "vite", "build": "tsc -b && vite build", "preview": "vite preview", "test": "node --experimental-strip-types --test src/fracture.test.ts" },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --test src/fracture.test.ts"
+  },
   "dependencies": {
     "@pmndrs/glyph": "0.1.0-canary-305e5ec9-20261010",
-    "@react-three/fiber": "10.0.0-canary.87166dc",
     "@react-three/drei": "11.0.0-alpha.7",
+    "@react-three/fiber": "10.0.0-canary.87166dc",
+    "leva": "^0.10.1",
     "polygon-clipping": "0.15.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "three": "0.185.1"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3", "@types/react": "^19.2.18", "@types/react-dom": "^19.2.4",
-    "@types/three": "^0.185.4", "@vitejs/plugin-react": "^6.1.0", "typescript": "~6.0.2", "vite": "^8.2.2"
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@types/three": "^0.185.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2"
   }
 }

@@ -23,11 +23,8 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 .timeline:hover::-webkit-slider-thumb, .timeline:focus-visible::-webkit-slider-thumb { background: #ed582c; }
 .timeline::-moz-range-track { background: transparent; }
 .timeline::-moz-range-thumb { border: none; background: transparent; }
-.credits { position: absolute; bottom: 10px; left: calc(50% - 228px); width: 456px; display: grid; grid-template-columns: 92px 132px 44px 228px; }
+.credits { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 580px; display: grid; grid-template-columns: 90px 70px 70px 150px 70px 130px; }
 .credits a { height: 38px; }
-.credits a:nth-child(2) { margin-left: 27px; margin-right: 43px; }
-.credits a:nth-child(3) { margin-left: -3px; width: 62px; }
-.credits a:nth-child(4) { margin-left: 33px; width: 138px; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; background: #0b0b10; transition: opacity .3s; }
 .loading span { width: 24px; height: 24px; border: 1px solid #ffffff22; border-top-color: #ed582c; border-radius: 50%; animation: spin 1.5s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -45,9 +42,17 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 @media (max-width: 650px) {
   .playback-controls { top: 67px; right: 15px; }
   .timeline { width: 190px; left: calc(50% - 95px); }
-  .credits { left: calc(50% - 167px); width: 334px; grid-template-columns: 68px 90px 36px 140px; }
-  .credits a:nth-child(2) { margin-left: 18px; margin-right: 24px; }
-  .credits a:nth-child(3) { margin-left: -9px; width: 45px; }
-  .credits a:nth-child(4) { margin-left: 14px; width: 120px; }
+  .credits { bottom: 0; width: calc(100% - 32px); grid-template-columns: repeat(3, 1fr); }
+  .credits a { height: 28px; }
 }
 @media (prefers-reduced-motion: reduce) { .loading span { animation: none; } }
+
+.design-controls { color: #e7e8ef; position: absolute; top: 86px; right: 24px; width: 320px; z-index: 10; }
+@media (max-width: 650px) {
+  .design-controls { top: 115px; right: 20px; width: min(320px, calc(100vw - 40px)); }
+}
+
+.design-controls { max-height: calc(100svh - 110px); overflow-y: auto; scrollbar-width: thin; }
+
+.design-controls[hidden] { display: none; }
+.playback-controls button[aria-expanded="true"] { opacity: 1; background: #88888820; }

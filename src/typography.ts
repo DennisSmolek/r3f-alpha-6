@@ -1,14 +1,35 @@
 import { glyph, slug } from '@pmndrs/glyph';
 import { ThreeConfig } from '@pmndrs/glyph/three';
-import boldUrl from './assets/Geist-Bold.font.glb?url';
-import regularUrl from './assets/Geist-Regular.font.glb?url';
+import geistBoldUrl from './assets/Geist-Bold.font.glb?url';
+import geistRegularUrl from './assets/Geist-Regular.font.glb?url';
+import spaceUrl from './assets/SpaceGrotesk-SemiBold.font.glb?url';
+import syneUrl from './assets/Syne-SemiBold.font.glb?url';
+import thinUrl from './assets/Raleway-ExtraLight.font.glb?url';
+import plexUrl from './assets/IBMPlexMono-Regular.font.glb?url';
 
-/** Keep the current Glyph engine separate from the older workshop demos. */
+import manropeUrl from './assets/Manrope-SemiBold.font.glb?url';
+import outfitUrl from './assets/Outfit-Medium.font.glb?url';
+import bodoniUrl from './assets/BodoniModa-SemiBold.font.glb?url';
+
+import azeretUrl from './assets/AzeretMono-SemiBold.font.glb?url';
+import chakraUrl from './assets/ChakraPetch-SemiBold.font.glb?url';
+import unboundedUrl from './assets/Unbounded-Medium.font.glb?url';
+import spaceMonoUrl from './assets/SpaceMono-Bold.font.glb?url';
+import oxaniumUrl from './assets/Oxanium-SemiBold.font.glb?url';
+
+export type DisplayFont = 'Space Grotesk' | 'Syne' | 'Geist' | 'Manrope' | 'Outfit' | 'Bodoni Moda' | 'Azeret Mono' | 'Chakra Petch' | 'Unbounded' | 'Space Mono' | 'Oxanium';
+export type DetailFont = 'IBM Plex Mono' | 'Geist';
+
+/** Prebaked outlines let every display choice share the same fracture pipeline. */
 export const fontsReady = glyph.init().then(async () => {
-  const [bold, regular] = await Promise.all([
-    glyph.fontFace(boldUrl, { format: slug }).load(),
-    glyph.fontFace(regularUrl, { format: slug }).load(),
-  ]);
-  return { bold, regular, handle: glyph.handle('alpha-six', ThreeConfig) };
+  const [geistBold, geistRegular, space, syne, plex, thin, manrope, outfit, bodoni, azeret, chakra, unbounded, spaceMono, oxanium] = await Promise.all(
+    [geistBoldUrl, geistRegularUrl, spaceUrl, syneUrl, plexUrl, thinUrl, manropeUrl, outfitUrl, bodoniUrl, azeretUrl, chakraUrl, unboundedUrl, spaceMonoUrl, oxaniumUrl].map(url => glyph.fontFace(url, { format: slug }).load()),
+  );
+  return {
+    thin,
+    display: { 'Space Grotesk': space, Syne: syne, Geist: geistBold, Manrope: manrope, Outfit: outfit, 'Bodoni Moda': bodoni, 'Azeret Mono': azeret, 'Chakra Petch': chakra, Unbounded: unbounded, 'Space Mono': spaceMono, Oxanium: oxanium },
+    detail: { 'IBM Plex Mono': plex, Geist: geistRegular },
+    handle: glyph.handle('alpha-six', ThreeConfig),
+  };
 });
 export type Typography = Awaited<typeof fontsReady>;

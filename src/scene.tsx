@@ -1,3 +1,4 @@
+import { traceStartup } from './startup';
 import { use, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei/core';
@@ -45,6 +46,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
   const update = useRef<((time: number) => void) | null>(null);
 
   useLayoutEffect(() => {
+    traceStartup('Building scene');
     const w = size.width, h = size.height;
     const compact = w < 650;
     const root = new Group();
@@ -224,7 +226,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     // Compile the complete page before releasing the intro clock.
     // Skip effects torn down by StrictMode before starting asynchronous GPU work.
     Promise.resolve().then(() => alive ? (renderer as WebGPURenderer).compileAsync(scene, camera) : undefined).then(() => {
-      if (alive) onReady();
+      if (alive) { traceStartup('Scene ready'); onReady(); }
     }).catch(error => { if (alive) onError(error); });
     return () => {
       alive = false;

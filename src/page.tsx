@@ -1,3 +1,4 @@
+import { traceStartup } from './startup';
 import { Component, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Canvas, invalidate } from '@react-three/fiber';
 import { NoToneMapping } from 'three/webgpu';
@@ -65,6 +66,7 @@ export default function AnnouncementPage() {
     motion.addEventListener('change', updateMotion);
     const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
     (gpu?.requestAdapter() ?? Promise.resolve(null)).then(adapter => {
+      traceStartup(adapter ? 'GPU adapter ready' : 'No GPU adapter');
       if (alive) setSupport(adapter ? 'yes' : 'no');
     }).catch(() => { if (alive) setSupport('no'); });
     return () => { alive = false; motion.removeEventListener('change', updateMotion); };
@@ -102,6 +104,7 @@ export default function AnnouncementPage() {
       {!fallback && support === 'yes' && (
         <SceneBoundary onError={onError}>
           <Canvas frameloop={paused && (!settings.animate || reducedMotion) && (settings.cameraMode !== 'Pointer' || reducedMotion || settings.parallax === 0) ? 'demand' : 'always'} onCreated={({ renderer }) => {
+            traceStartup('Canvas ready');
             if (!(renderer as unknown as { backend?: { isWebGPUBackend?: boolean } }).backend?.isWebGPUBackend) onError(new Error('A native WebGPU backend is required'));
           }} orthographic camera={{ position: [0, 0, 1000], near: 0.1, far: 2500, zoom: 1 }} dpr={[1, 1.75]} renderer={{ antialias: true, alpha: false, toneMapping: NoToneMapping }}>
             <Suspense fallback={null}><AnnouncementScene settings={settings} onCameraPose={setCameraPose} playback={playback} onReady={onReady} onError={onError} /></Suspense>

@@ -1,3 +1,4 @@
+import { traceStartup } from './startup';
 import { glyph, slug } from '@pmndrs/glyph';
 import { ThreeConfig } from '@pmndrs/glyph/three';
 import geistBoldUrl from './assets/Geist-Bold.font.glb?url';
@@ -22,9 +23,11 @@ export type DetailFont = 'IBM Plex Mono' | 'Geist';
 
 /** Prebaked outlines let every display choice share the same fracture pipeline. */
 export const fontsReady = glyph.init().then(async () => {
+  traceStartup('Typography engine ready');
   const [geistBold, geistRegular, space, syne, plex, thin, manrope, outfit, bodoni, azeret, chakra, unbounded, spaceMono, oxanium] = await Promise.all(
     [geistBoldUrl, geistRegularUrl, spaceUrl, syneUrl, plexUrl, thinUrl, manropeUrl, outfitUrl, bodoniUrl, azeretUrl, chakraUrl, unboundedUrl, spaceMonoUrl, oxaniumUrl].map(url => glyph.fontFace(url, { format: slug }).load()),
   );
+  traceStartup('Fonts ready');
   return {
     thin,
     display: { 'Space Grotesk': space, Syne: syne, Geist: geistBold, Manrope: manrope, Outfit: outfit, 'Bodoni Moda': bodoni, 'Azeret Mono': azeret, 'Chakra Petch': chakra, Unbounded: unbounded, 'Space Mono': spaceMono, Oxanium: oxanium },

@@ -75,3 +75,5 @@ Compare 20 additional display and code faces in the self-contained [font specime
 Use Node.js 22 or newer and pnpm 10.33.0. Run `pnpm test` and `pnpm build` before opening a pull request. For visual feedback, include a screenshot, browser/device details, and an exported settings file from the scene panel.
 
 Pushes to `main` run the font fracture tests, build the site, and deploy `dist/` through GitHub Actions to GitHub Pages. The Vite build uses relative asset URLs so it also works under the repository subpath.
+
+For startup reports, append `?debug` to the site URL to log GPU, typography, environment, and shader readiness in the browser console.

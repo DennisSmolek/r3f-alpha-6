@@ -1,7 +1,6 @@
 import { traceStartup } from './startup';
-import { use, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
+import { use, useEffect, useLayoutEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { RoundedBox } from '@react-three/drei/core';
 import { glyph } from '@pmndrs/glyph';
 import { defineTextMaterial } from '@pmndrs/glyph/three';
 import { Color, DoubleSide, Group, Mesh, MeshBasicNodeMaterial, PlaneGeometry, PMREMGenerator, Vector3, type WebGPURenderer } from 'three/webgpu';
@@ -170,7 +169,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     const footSize = compact ? 9 : 11;
     const footY = -h / 2 + 29;
     credits.forEach(([text], i) => {
-      const x = compact ? (i % 3 - 1) * (w - 32) / 3 : [-245, -165, -95, 15, 125, 225][i];
+      const x = compact ? (i < 3 ? (i - 1) * (w - 32) / 3 : (i - 3.5) * (w - 32) / 2) : [-210, -130, -20, 90, 190][i];
       const y = compact ? -h / 2 + (i < 3 ? 42 : 14) : footY;
       label(text, x, y, footSize, { tone: 'muted' });
     });
@@ -259,19 +258,5 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     update.current?.(p.time);
     if (p.ready) captureTransmissionBackdrop(renderer, scene, camera, state.elapsed);
   }, { priority: 1 });
-  return <PoimandresMark playback={playback} breakDelay={settings.breakDelay} />;
-}
-
-
-function PoimandresMark({ playback, breakDelay }: { playback: React.RefObject<Playback>; breakDelay: number }) {
-  const { size } = useThree();
-  const [material, dark, light] = useMemo(() => [new MeshBasicNodeMaterial({ toneMapped: false }), new Color('#d1d0cd'), new Color('#24221f')], []);
-  const unit = size.width < 650 ? 10 : 11;
-  useFrame(() => { material.color.lerpColors(dark, light, ease(choreographyTime(playback.current.time, breakDelay), 2.2, 3.4)); });
-  useLayoutEffect(() => () => material.dispose(), [material]);
-  return <group position={[0, -size.height * 0.286, -30]}>
-    {[[ -1.16, 0, 1, 1 ], [0, 0, 1, 1], [0, -1.16, 1, 1], [0.58, 1.16, 2.16, 1], [1.16, 0.58, 1, 2.16]].map(([x, y, w, h], i) => (
-      <RoundedBox key={i} args={[w * unit, h * unit, 1]} radius={0.12} smoothness={2} position={[x * unit, y * unit, 0]} material={material} />
-    ))}
-  </group>;
+  return null;
 }

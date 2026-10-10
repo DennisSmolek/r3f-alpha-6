@@ -134,7 +134,7 @@ export default function AnnouncementPage() {
           <svg viewBox="0 0 20 20"><path d="M4 3v14M10 3v14M16 3v14" /><path d="M2 7h4M8 13h4M14 6h4" strokeWidth="3" /></svg>
         </button>
       </div>
-      <a className="hit-area logo-link" href="https://pmnd.rs" aria-label="Poimandres"><span>Poimandres</span></a>
+      <a className="hit-area logo-link" href="https://pmnd.rs" aria-label="Poimandres"><svg viewBox="0 0 3.32 3.32" aria-hidden="true" focusable="false"><path fill="currentColor" d="M0 1.16h1v1H0zM1.16 1.16h1v1h-1zM1.16 2.32h1v1h-1zM1.16 0h2.16v2.16h-1V1H1.16z" /></svg><span>Poimandres</span></a>
       <nav className="primary-links" aria-label="Explore React Three Fiber">
         <a className="hit-area" href="https://r3f.docs.pmnd.rs/getting-started/introduction"><span>Docs</span></a>
         <a className="hit-area" href="https://r3f.docs.pmnd.rs/getting-started/examples"><span>Examples</span></a>

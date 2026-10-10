@@ -15,6 +15,8 @@ a { color: inherit; text-decoration: none; }
 .hit-area:hover { background: #8888880e; }
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid #ed582c; outline-offset: 5px; }
 .logo-link { position: absolute; top: calc(78.6% - 28px); left: calc(50% - 28px); width: 56px; height: 56px; }
+.logo-link { display: grid; place-items: center; }
+.logo-link svg { width: 36.52px; height: 36.52px; transition: color .35s; }
 .primary-links { position: absolute; top: calc(85.3% - 22px); left: calc(50% - 97px); display: flex; gap: 14px; }
 .primary-links a { width: 90px; height: 44px; }
 .timeline { position: absolute; top: calc(90.7% - 12px); left: calc(50% - 113px); width: 226px; height: 24px; margin: 0; appearance: none; background: transparent; cursor: ew-resize; }
@@ -23,7 +25,7 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 .timeline:hover::-webkit-slider-thumb, .timeline:focus-visible::-webkit-slider-thumb { background: #ed582c; }
 .timeline::-moz-range-track { background: transparent; }
 .timeline::-moz-range-thumb { border: none; background: transparent; }
-.credits { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 580px; display: grid; grid-template-columns: 90px 70px 70px 150px 70px 130px; }
+.credits { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 510px; display: grid; grid-template-columns: 90px 70px 150px 70px 130px; }
 .credits a { height: 38px; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; background: #0b0b10; transition: opacity .3s; }
 .loading span { width: 24px; height: 24px; border: 1px solid #ffffff22; border-top-color: #ed582c; border-radius: 50%; animation: spin 1.5s linear infinite; }
@@ -42,10 +44,12 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 @media (max-width: 650px) {
   .playback-controls { top: 67px; right: 15px; }
   .timeline { width: 190px; left: calc(50% - 95px); }
-  .credits { bottom: 0; width: calc(100% - 32px); grid-template-columns: repeat(3, 1fr); }
-  .credits a { height: 28px; }
+  .credits { bottom: 0; width: calc(100% - 32px); grid-template-columns: repeat(6, 1fr); }
+  .credits a { height: 28px; grid-column: span 2; }
+  .credits a:nth-child(n+4) { grid-column: span 3; }
+  .logo-link svg { width: 33.2px; height: 33.2px; }
 }
-@media (prefers-reduced-motion: reduce) { .loading span { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .loading span { animation: none; } .logo-link svg { transition: none; } }
 
 .design-controls { color: #e7e8ef; position: absolute; top: 86px; right: 24px; width: 320px; z-index: 10; }
 @media (max-width: 650px) {

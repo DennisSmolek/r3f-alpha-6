@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@pmndrs/glyph": "0.1.0-canary-305e5ec9-20261010",
-    "@react-three/drei": "11.0.0-alpha.7",
     "@react-three/fiber": "10.0.0-canary.87166dc",
     "leva": "^0.10.1",
     "polygon-clipping": "0.15.7",

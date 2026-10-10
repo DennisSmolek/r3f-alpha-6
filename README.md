@@ -31,7 +31,7 @@ The build is a static Vite site in `dist/`. No API keys, remote fonts, or runtim
 - The word `renderer` is cut by a single deterministic, impact-clustered 2D Voronoi field across all letters, intersected with the actual letter contours and counters, then extruded. This is an original CPU geometry preparation step inspired by three-pinata, not its WebGL shaders. Motion is analytic gravity and angular velocity, with all drawing and materials using WebGPU/TSL.
 - Anderson Mancini's transmission nodes, lighting model, and backdrop manager provide the glass. One material and one shared backdrop manager are shared across all letters and pieces. The glass uses smooth eight-segment bevels, 32-segment outline curves, front/back refraction passes, and a bundled Poly Haven studio HDR. It refracts the actual gradient, grid, rear Glyph text, and orbiting metal geometry. The metal geometry lives on the transmission capture layer and is hidden from the main camera.
 - The grain gradient is a TSL adaptation of Paper Shaders wave, ripple, and blob modes. Grain distorts the gradient bands instead of being a uniform overlay. Procedural TSL noise replaces the original texture randomizer and simplex noise, so it is not a pixel-identical GLSL port. Attribution and Apache license notices ship in the build.
-- Drei's rounded-box geometry forms the Poimandres mark.
+- The flat Poimandres mark is an inline SVG, with no 3D geometry or extra rendering dependency.
 
 ## Interaction and accessibility
 

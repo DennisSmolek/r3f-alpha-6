@@ -1,6 +1,7 @@
 import { Color, DoubleSide, Group, Mesh, MeshBasicNodeMaterial, MeshPhysicalNodeMaterial, PlaneGeometry, SphereGeometry, TorusGeometry } from 'three/webgpu';
-import { abs, float, fract, fwidth, max, mix, smoothstep, uniform, uv, vec2 } from 'three/tsl';
+import { smoothstep, uniform, uv } from 'three/tsl';
 import { defineTextMaterial } from '@pmndrs/glyph/three';
+import { gridPattern } from './grid';
 import { TRANSMISSION_BACKDROP_LAYER } from './glass/transmissionBackdrop';
 import type { Typography } from './typography';
 import type { SceneSettings } from './settings';
@@ -27,19 +28,9 @@ export function createStage(width: number, height: number, typography: Typograph
   const crosshairOpacity = uniform(1), crosshairSpacing = uniform(4);
   const gridMaterial = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false, side: DoubleSide, toneMapped: false });
   const planeSize = Math.max(width, height) * 1.4;
-  const q = uv().sub(0.5).mul(planeSize).div(cellSize);
-  const distance = abs(fract(q.sub(0.5)).sub(0.5)).div(max(fwidth(q), vec2(0.0001)));
-  const line = float(1).sub(distance.x.min(distance.y).clamp());
-  const intersections = abs(fract(q.div(crosshairSpacing).add(0.5)).sub(0.5)).mul(crosshairSpacing).mul(cellSize);
-  const pixel = max(fwidth(q).mul(cellSize), vec2(0.0001));
-  const crossVertical = float(1).sub(smoothstep(pixel.x.mul(0.65), pixel.x.mul(1.5), intersections.x))
-    .mul(float(1).sub(smoothstep(5, 7, intersections.y)));
-  const crossHorizontal = float(1).sub(smoothstep(pixel.y.mul(0.65), pixel.y.mul(1.5), intersections.y))
-    .mul(float(1).sub(smoothstep(5, 7, intersections.x)));
-  const crosshair = max(crossVertical, crossHorizontal).mul(crosshairOpacity);
   const axes = smoothstep(0.9, 0.5, uv().sub(0.5).length().mul(2));
   gridMaterial.colorNode = gridColor;
-  gridMaterial.opacityNode = max(line, crosshair.mul(2.2)).mul(axes).mul(gridAlpha);
+  gridMaterial.opacityNode = gridPattern(uv().sub(0.5).mul(planeSize), cellSize, crosshairSpacing, crosshairOpacity).mul(axes).mul(gridAlpha);
   const grid = new Mesh(new PlaneGeometry(planeSize, planeSize), gridMaterial);
   grid.position.set(0, height * 0.13 - Math.min(width * 0.08, 105), -140);
   root.add(grid);

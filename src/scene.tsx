@@ -2,27 +2,22 @@ import { traceStartup } from './startup';
 import { use, useEffect, useLayoutEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { glyph } from '@pmndrs/glyph';
-import { defineTextMaterial } from '@pmndrs/glyph/three';
-import { Color, DoubleSide, Group, Mesh, MeshBasicNodeMaterial, PlaneGeometry, PMREMGenerator, Vector3, type WebGPURenderer } from 'three/webgpu';
+import { Group, Mesh, MeshBasicNodeMaterial, PlaneGeometry, Vector3, type WebGPURenderer } from 'three/webgpu';
+import { uniform } from 'three/tsl';
 import { credits } from './credits';
-import { animationDuration, choreographyTime } from './timeline';
+import { animationDuration, choreographyTime, ease } from './timeline';
 import { useCameraRig } from './camera';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { color, mix, uniform } from 'three/tsl';
 import { fontsReady } from './typography';
-import { studioReady } from './environment';
+import { createEnvironmentMap, studioReady } from './environment';
 import { createStage } from './stage';
+import { createLabels, type LabelOptions } from './labels';
 import type { CameraPose, SceneSettings } from './settings';
+import type { Playback } from './shell/use-playback';
 import { extrude, fractureGlyph, glyphShapes } from './fracture';
 import { createBackground } from './background';
 import { createGlass } from './glass/create-glass';
+import { updateGlass } from './glass/update-glass';
 import { captureTransmissionBackdrop } from './glass/transmissionBackdrop';
-
-export type Playback = { time: number; playing: boolean; ready: boolean; reduced: boolean };
-export function ease(t: number, from: number, to: number) {
-  const x = Math.max(0, Math.min(1, (t - from) / (to - from)));
-  return x * x * (3 - 2 * x);
-}
 
 export function AnnouncementScene({ playback, settings, onCameraPose, onReady, onError }: {
   playback: React.RefObject<Playback>;
@@ -55,39 +50,20 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     const stage = createStage(w, h, typography);
     root.add(stage.root);
     const glass = createGlass(renderer, scene, camera);
-    const pmrem = new PMREMGenerator(renderer as WebGPURenderer);
-    const room = new RoomEnvironment();
-    const environment = environmentChoice === 'Studio HDR' ? pmrem.fromEquirectangular(studio) : pmrem.fromScene(room, 0.04);
+    const environment = createEnvironmentMap(renderer as WebGPURenderer, studio, environmentChoice);
     const previousEnvironment = scene.environment;
     scene.environment = environment.texture;
     scene.environmentIntensity = 1;
     const geometries: { dispose(): void }[] = [];
     const materials: { dispose(): void }[] = [];
-    const textObjects: { dispose(): void }[] = [];
-    const theme = uniform(0), appear = uniform(0), alphaAppear = uniform(0);
-    const ink = mix(color('#d1d0cd'), color('#24221f'), theme);
-    const headingColor = uniform(new Color());
-    const muted = mix(color('#818183'), color('#77716a'), theme);
-    const makeTextMaterial = (tone: 'ink' | 'muted' | 'accent' | 'heading', opacity = uniform(1)) => defineTextMaterial(context => {
-      const material = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false, depthTest: false, toneMapped: false, side: DoubleSide });
-      material.positionNode = context.position;
-      material.colorNode = tone === 'heading' ? headingColor : tone === 'accent' ? color('#ee5429') : tone === 'muted' ? muted : ink;
-      material.opacityNode = context.shader.opacity.mul(opacity);
-      materials.push(material);
-      return material;
-    });
-    const label = (text: string, x: number, y: number, fontSize: number, options: { tone?: 'ink' | 'muted' | 'accent' | 'heading'; opacity?: typeof appear; bold?: boolean; depth?: number; align?: 'left' | 'center' | 'right' } = {}) => {
-      const object = typography.handle.createText({
-        font: options.bold ? typography.display[displayFont] : typography.detail[detailFont],
-        text, style: { fontSize, lineHeight: 1.1 },
-        material: makeTextMaterial(options.tone ?? 'ink', options.opacity),
-      });
-      object.onError = onError;
-      const m = object.glyphs();
-      const box = m.inkBounds!;
-      object.position.set(x - (options.align === 'left' ? 0 : options.align === 'right' ? m.width : m.width / 2), y + box.y + box.height / 2, options.depth ?? -100);
+    const appear = uniform(0), alphaAppear = uniform(0);
+    const labels = createLabels(typography, { displayFont, detailFont }, onError);
+    const label = (text: string, x: number, y: number, fontSize: number, options: LabelOptions & { depth?: number } = {}) => {
+      const object = labels.create(text, fontSize, options);
+      object.position.x += x;
+      object.position.y += y;
+      object.position.z = options.depth ?? -100;
       root.add(object);
-      textObjects.push(object);
       return object;
     };
 
@@ -181,24 +157,14 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
       const time = choreographyTime(elapsed, settings.breakDelay);
       const light = ease(time, 2.15, 4.8);
       const close = ease(time, 3.05, 5.05);
-      theme.value = ease(time, 2.2, 3.4);
+      labels.theme.value = ease(time, 2.2, 3.4);
       background.reveal.value = light;
-      headingColor.value.set(settings.color2);
+      labels.headingColor.value.set(settings.color2);
       background.update(settings);
       background.time.value = flowTime.current;
       stage.update(settings, atmosphereTime.current, light);
       scene.environmentRotation.set(0, settings.environmentRotation * Math.PI / 180, 0);
-      glass.params.ior.value = liveSettings.current.ior;
-      glass.params.thickness.value = liveSettings.current.thickness;
-      glass.material.envMapIntensity = liveSettings.current.reflections;
-      glass.material.color.set(settings.glassTint);
-      glass.material.roughness = settings.roughness;
-      glass.material.dispersion = settings.dispersion;
-      glass.params.distortion.value = settings.distortion;
-      glass.params.time.value = atmosphereTime.current;
-      glass.config.backside = settings.backside;
-      glass.config.backsideThickness = settings.thickness;
-      glass.params.backsideThickness.value = settings.thickness;
+      updateGlass(glass, settings, atmosphereTime.current);
       appear.value = ease(time, 4.35, 5.5);
       alphaAppear.value = ease(time, 3.65, 4.5);
       title.scale.setScalar(initialSize + (finalSize - initialSize) * close);
@@ -231,7 +197,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
       alive = false;
       update.current = null;
       root.removeFromParent();
-      textObjects.forEach(text => text.dispose());
+      labels.dispose();
       glyph.shape();
       geometries.forEach(geometry => geometry.dispose());
       materials.forEach(material => material.dispose());
@@ -240,8 +206,6 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
       background.dispose();
       scene.environment = previousEnvironment;
       environment.dispose();
-      room.dispose();
-      pmrem.dispose();
     };
   }, [size.width, size.height, displayFont, detailFont, environmentChoice, depth, bevel, fractureSeed, fragmentCount, studio, typography, scene, camera, renderer, playback, onReady, onError]);
 

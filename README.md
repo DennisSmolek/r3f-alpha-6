@@ -33,6 +33,15 @@ The build is a static Vite site in `dist/`. No API keys, remote fonts, or runtim
 - The grain gradient is a TSL adaptation of Paper Shaders wave, ripple, and blob modes. Grain distorts the gradient bands instead of being a uniform overlay. Procedural TSL noise replaces the original texture randomizer and simplex noise, so it is not a pixel-identical GLSL port. Attribution and Apache license notices ship in the build.
 - The flat Poimandres mark is an inline SVG, with no 3D geometry or extra rendering dependency.
 
+## Ground layout
+
+`ground.html` is an alternate take on the same announcement. Instead of parallax layers, the gradient and grid become a floor seen from above, and the glass `<Canvas renderer />` stands on it. The rest of the copy, the Poimandres mark, and the progress bar are printed flat on the floor at the same screen positions as the main page, so the HTML hit areas still line up.
+
+- `/>` winds up like a spring, leaning and compressing, then flings left. The word shatters at the moment it touches `renderer`. It keeps half its speed, springs into its slot, and `<Canvas` glides over to meet it.
+- Shards fall under a small custom rigid-body simulation. Convex hull points resolve contact with the ground and the standing letters, so pieces settle flat and get pushed aside by the moving tag. Spheres keep the shards from passing through each other. The simulation is baked when the scene builds, so replay, scrubbing, and reduced motion stay exact.
+- A key light casts soft shadows from the glass onto the floor. The glass casts through shadow-only stand-ins on their own layer, because the glass backdrop pass renders first each frame with the glass hidden.
+- **Strike & shards** in the panel controls the wind-up distance, gravity, bounce, friction, and the shard spheres. **Ground** adds shadow strength and a road-marking stretch for distant copy.
+
 ## Interaction and accessibility
 
 The intro starts after fonts, geometry, and the scene's shaders are ready. Replay and pause controls sit at the top right. The bar below the links is a scrubber, including arrow, Page Up/Down, Home, and End keyboard support. Reduced-motion visitors begin at the final state. A damped pointer orbit moves the hero, announcement, and utility text at slightly different depths. Its default range is 8° horizontally and 5° vertically. It is disabled for reduced motion and touch input. The background and stage have a separate animation clock and continue after the intro. Turn off Animate scene and select Fixed view or Drag to orbit to render on demand after the intro. Reduced motion freezes ambient animation as well as parallax. Semantic HTML and actual links accompany the canvas text for keyboard and screen-reader access.
@@ -45,12 +54,14 @@ The intro starts after fonts, geometry, and the scene's shaders are ready. Repla
 - `src/environment.ts`: bundled HDR loading.
 - `src/glass/create-glass.js`: refraction and glass parameters.
 - `src/fracture.ts`: outline conversion and cell construction.
-- `src/page.tsx`: URLs, semantic content, playback controls, GPU gate.
+- `src/page.tsx`: main page wiring. Shared page pieces live in `src/shell/`: playback clock, controls, links, fallback copy, GPU gate.
+- `src/controls.ts`: panel schemas shared by both layouts. `src/labels.ts`, `src/grain-gradient.ts`, `src/grid.ts`: shared Glyph labels and shaders.
+- `src/ground/`: the ground layout. `choreography.ts` (timing and the `/>` spring), `shard-physics.ts`, `glass-title.ts`, `ground.ts`, `ground-copy.ts`, `layout.ts`, `shadow-light.ts`, `scene.tsx`.
 - `src/style.css`: interactive hit areas and fallback layout.
 
 The final release number is announcement copy; the installed renderer is the pinned canary above. Docs and examples currently point to the public R3F introduction and examples pages. Update them if Alpha 6 gets dedicated destinations.
 
-`pnpm test` checks that the actual Glyph outlines for `renderer` fracture into finite meshes without losing or filling letter area, including the holes in `e` and `d`.
+`pnpm test` checks that the actual Glyph outlines for `renderer` fracture into finite meshes without losing or filling letter area, including the holes in `e` and `d`. It also checks that the ground layout's `/>` touches `renderer` exactly at the strike and settles in its slot, and that the baked shards come to rest on the ground outside the standing letters.
 
 See [source credits](src/CREDITS.md).
 

@@ -2,11 +2,17 @@ import { useEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import { MathUtils, Vector2 } from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { CameraPose, SceneSettings } from './settings';
-import type { Playback } from './scene';
+import type { CameraSettings } from './controls';
+import type { Playback } from './shell/use-playback';
 
-/** Keep pointer animation separate from the saved camera pose. */
-export function useCameraRig(settings: SceneSettings, playback: React.RefObject<Playback>, onPose: (pose: CameraPose) => void) {
+type CameraPose = Pick<CameraSettings, 'cameraYaw' | 'cameraPitch' | 'cameraZoom'>;
+
+/**
+ * Keep pointer animation separate from the saved camera pose.
+ * `pitch` bounds drag orbiting and `pointerPitch` bounds the pose plus cursor offset, both in degrees above the horizon.
+ */
+export function useCameraRig(settings: CameraSettings, playback: React.RefObject<Playback>, onPose: (pose: CameraPose) => void,
+  { distance = 1000, pitch = [-45, 45], pointerPitch = [-75, 75] }: { distance?: number; pitch?: [number, number]; pointerPitch?: [number, number] } = {}) {
   const { camera, renderer, invalidate } = useThree();
   const controls = useRef<OrbitControls | null>(null);
   const pointer = useRef(new Vector2());
@@ -21,8 +27,8 @@ export function useCameraRig(settings: SceneSettings, playback: React.RefObject<
     orbit.enableDamping = false;
     orbit.minAzimuthAngle = MathUtils.degToRad(-60);
     orbit.maxAzimuthAngle = MathUtils.degToRad(60);
-    orbit.minPolarAngle = MathUtils.degToRad(45);
-    orbit.maxPolarAngle = MathUtils.degToRad(135);
+    orbit.minPolarAngle = MathUtils.degToRad(90 - pitch[1]);
+    orbit.maxPolarAngle = MathUtils.degToRad(90 - pitch[0]);
     orbit.minZoom = 0.65;
     orbit.maxZoom = 1.8;
     const save = () => live.current.onPose({
@@ -57,7 +63,7 @@ export function useCameraRig(settings: SceneSettings, playback: React.RefObject<
       window.removeEventListener('blur', reset);
       renderer.domElement.style.cursor = '';
     };
-  }, [camera, renderer, invalidate, playback]);
+  }, [camera, renderer, invalidate, playback, pitch[0], pitch[1]]);
 
   useEffect(() => {
     const orbit = controls.current;
@@ -68,13 +74,13 @@ export function useCameraRig(settings: SceneSettings, playback: React.RefObject<
     renderer.domElement.style.touchAction = orbit.enabled ? 'none' : 'auto';
     offset.current.set(0, 0);
     pointer.current.set(0, 0);
-    camera.position.setFromSphericalCoords(1000, MathUtils.degToRad(90 - settings.cameraPitch), MathUtils.degToRad(settings.cameraYaw));
+    camera.position.setFromSphericalCoords(distance, MathUtils.degToRad(90 - settings.cameraPitch), MathUtils.degToRad(settings.cameraYaw));
     camera.zoom = settings.cameraZoom;
     camera.updateProjectionMatrix();
     camera.lookAt(0, 0, 0);
     orbit.update();
     invalidate();
-  }, [camera, renderer, invalidate, settings.cameraMode, settings.cameraYaw, settings.cameraPitch, settings.cameraZoom, settings.orbitSpeed]);
+  }, [camera, renderer, invalidate, distance, settings.cameraMode, settings.cameraYaw, settings.cameraPitch, settings.cameraZoom, settings.orbitSpeed]);
 
   return (delta: number) => {
     const s = live.current.settings;
@@ -83,8 +89,8 @@ export function useCameraRig(settings: SceneSettings, playback: React.RefObject<
       const blend = 1 - Math.exp(-s.cameraSmoothing * Math.min(delta, 0.05));
       offset.current.x = MathUtils.lerp(offset.current.x, pointer.current.x * s.pointerX * strength, blend);
       offset.current.y = MathUtils.lerp(offset.current.y, pointer.current.y * s.pointerY * strength, blend);
-      camera.position.setFromSphericalCoords(1000,
-        MathUtils.degToRad(90 - MathUtils.clamp(s.cameraPitch + offset.current.y, -75, 75)),
+      camera.position.setFromSphericalCoords(distance,
+        MathUtils.degToRad(90 - MathUtils.clamp(s.cameraPitch + offset.current.y, pointerPitch[0], pointerPitch[1])),
         MathUtils.degToRad(MathUtils.clamp(s.cameraYaw + offset.current.x, -80, 80)));
       camera.lookAt(0, 0, 0);
     }

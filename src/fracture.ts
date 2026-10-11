@@ -4,7 +4,7 @@ import polygonClipping, { type Pair, type Polygon } from 'polygon-clipping';
 import type { GlyphLayoutInspection } from '@pmndrs/glyph';
 
 /** Deterministic cells make replay and resize produce the same fracture. */
-function random(seed: number) {
+export function random(seed: number) {
   return () => {
     seed = (Math.imul(seed, 1664525) + 1013904223) | 0;
     return (seed >>> 0) / 4294967296;
@@ -79,8 +79,11 @@ export function extrude(shapes: Shape[], bevel = 0.012, depth = 0.22, smooth = t
   return geometry;
 }
 
-/** Intersect each Voronoi cell with the full letter, preserving counters and disconnected islands. */
-export function fractureGlyph(shapes: Shape[], seed: number, options: { cells?: number; depth?: number } = {}) {
+/**
+ * Intersect each Voronoi cell with the full letter, preserving counters and disconnected islands.
+ * `impact` places the strike as a fraction of the word's bounds, where splinters cluster.
+ */
+export function fractureGlyph(shapes: Shape[], seed: number, options: { cells?: number; depth?: number; impact?: [number, number] } = {}) {
   const rng = random(seed);
   const polygons: Polygon[] = shapes.map(shape => {
     const points = shape.extractPoints(32);
@@ -90,7 +93,8 @@ export function fractureGlyph(shapes: Shape[], seed: number, options: { cells?: 
   const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs);
   const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const impact: Pair = [minX + (maxX - minX) * 0.58, minY + (maxY - minY) * 0.52];
+  const [ix, iy] = options.impact ?? [0.58, 0.52];
+  const impact: Pair = [minX + (maxX - minX) * ix, minY + (maxY - minY) * iy];
   // A single impact field spans the word. Dense splinters mix with large, irregular cells.
   const sites: Pair[] = Array.from({ length: options.cells ?? 11 }, (_, i) => {
     if (i % 3 === 0) {

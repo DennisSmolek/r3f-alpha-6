@@ -23,18 +23,31 @@ import jetBrainsUrl from './assets/JetBrainsMono-SemiBold.font.glb?url';
 export type DisplayFont = 'Space Grotesk' | 'Syne' | 'Geist' | 'Manrope' | 'Outfit' | 'Bodoni Moda' | 'Azeret Mono' | 'Chakra Petch' | 'Unbounded' | 'Space Mono' | 'Oxanium' | 'JetBrains Mono';
 export type DetailFont = 'IBM Plex Mono' | 'Geist';
 
-/** Prebaked outlines let every display choice share the same fracture pipeline. */
-export const fontsReady = glyph.init().then(async () => {
+const display: Record<DisplayFont, string> = { 'Space Grotesk': spaceUrl, Syne: syneUrl, Geist: geistBoldUrl, Manrope: manropeUrl, Outfit: outfitUrl, 'Bodoni Moda': bodoniUrl, 'Azeret Mono': azeretUrl, 'Chakra Petch': chakraUrl, Unbounded: unboundedUrl, 'Space Mono': spaceMonoUrl, Oxanium: oxaniumUrl, 'JetBrains Mono': jetBrainsUrl };
+const detail: Record<DetailFont, string> = { 'IBM Plex Mono': plexUrl, Geist: geistRegularUrl };
+
+const engine = glyph.init().then(() => {
   traceStartup('Typography engine ready');
-  const [geistBold, geistRegular, space, syne, plex, thin, manrope, outfit, bodoni, azeret, chakra, unbounded, spaceMono, oxanium, jetBrains] = await Promise.all(
-    [geistBoldUrl, geistRegularUrl, spaceUrl, syneUrl, plexUrl, thinUrl, manropeUrl, outfitUrl, bodoniUrl, azeretUrl, chakraUrl, unboundedUrl, spaceMonoUrl, oxaniumUrl, jetBrainsUrl].map(url => glyph.fontFace(url, { format: slug }).load()),
-  );
-  traceStartup('Fonts ready', 0.22);
-  return {
-    thin,
-    display: { 'Space Grotesk': space, Syne: syne, Geist: geistBold, Manrope: manrope, Outfit: outfit, 'Bodoni Moda': bodoni, 'Azeret Mono': azeret, 'Chakra Petch': chakra, Unbounded: unbounded, 'Space Mono': spaceMono, Oxanium: oxanium, 'JetBrains Mono': jetBrains },
-    detail: { 'IBM Plex Mono': plex, Geist: geistRegular },
-    handle: glyph.handle('alpha-six', ThreeConfig),
-  };
+  return glyph.handle('alpha-six', ThreeConfig);
 });
-export type Typography = Awaited<typeof fontsReady>;
+const loads = new Map<string, Promise<unknown>>();
+/** Starts a load once per key. Later calls share it, so `use` sees a stable promise. */
+const once = <T,>(key: string, load: () => Promise<T>) => {
+  if (!loads.has(key)) loads.set(key, load());
+  return loads.get(key) as Promise<T>;
+};
+const face = (url: string) => once(url, () => engine.then(() => glyph.fontFace(url, { format: slug }).load()));
+
+/**
+ * The text handle with the chosen display and detail fonts. Only fonts in use are downloaded, and each loads
+ * once. Prebaked outlines let every display choice share the same fracture pipeline. `withThin` adds the
+ * light face behind the flat layout.
+ */
+export function loadTypography(displayFont: DisplayFont, detailFont: DetailFont, withThin = false) {
+  return once(`${displayFont}/${detailFont}/${withThin}`, async () => {
+    const [handle, displayFace, detailFace, thin] = await Promise.all([engine, face(display[displayFont]), face(detail[detailFont]), withThin ? face(thinUrl) : undefined]);
+    traceStartup('Fonts ready', 0.22);
+    return { handle, display: displayFace, detail: detailFace, thin };
+  });
+}
+export type Typography = Awaited<ReturnType<typeof loadTypography>>;

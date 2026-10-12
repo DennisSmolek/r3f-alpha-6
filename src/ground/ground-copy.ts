@@ -18,7 +18,7 @@ import type { GroundSettings } from './settings';
 export function createGroundCopy(typography: Typography, settings: GroundSettings, onError: (error: unknown) => void, layout: GroundLayout, w: number, h: number) {
   const root = new Group(), screen = new Group(), hits = createHitAreas();
   root.add(screen);
-  const labels = createLabels(typography, settings, onError, true);
+  const labels = createLabels(typography, onError, true);
   const appear = uniform(0), alphaAppear = uniform(0);
   const compact = w < 650;
   const patches: { group: Group; scale: number; slant: number }[] = [];

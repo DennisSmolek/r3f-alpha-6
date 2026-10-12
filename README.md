@@ -40,7 +40,7 @@ The main page (`index.html`) sets the announcement on a floor. The gradient and 
 - On narrow screens the title starts at the width of `<Canvas renderer />` and grows to fit `<Canvas />` after the strike, so the final word fills the phone. A tap pops nearby shards.
 
 - `/>` winds up like a spring, leaning and compressing, then flings left. The word shatters at the moment it touches `renderer`. It keeps half its speed, springs into its slot, and `<Canvas` glides over to meet it.
-- Shards fall under a small custom rigid-body simulation. Convex hull points resolve contact with the ground and the standing letters, so pieces settle flat and get pushed aside by the moving tag. Spheres keep the shards from passing through each other. The simulation is baked when the scene builds, so replay, scrubbing, and reduced motion stay exact.
+- Shards fall under a small custom rigid-body simulation. Convex hull points resolve contact with the ground and the standing letters, so pieces settle flat and get pushed aside by the moving tag. Spheres keep the shards from passing through each other. The fracture and simulation are baked in a worker while the scene is already showing, and the opening hold waits for them if needed. Replay, scrubbing, and reduced motion stay exact.
 - After the intro the shards switch to a live simulation. An invisible sphere under the cursor sweeps them along the floor and a click pops nearby shards into the air. Replaying or scrubbing returns to the baked motion.
 - A key light casts soft shadows from the glass onto the floor. The glass casts through shadow-only stand-ins on their own layer, because the glass backdrop pass renders first each frame with the glass hidden.
 - **Strike & shards** in the panel controls the wind-up distance, gravity, bounce, friction, the shard spheres, and the cursor collider and its size. **Ground** adds shadow strength, a road-marking stretch for distant copy, and whether the footer credits lie on the floor or stay on the screen.
@@ -55,7 +55,7 @@ The intro starts after fonts, geometry, and the scene's shaders are ready. Repla
 
 ## Editing
 
-- `src/ground/`: the main page. `choreography.ts` (timing and the `/>` spring), `shard-world.ts` (the rigid-body step), `shard-physics.ts` (bake and live play), `use-ground-cursor.ts`, `glass-title.ts`, `ground.ts`, `ground-copy.ts`, `layout.ts`, `shadow-light.ts`, `scene.tsx`, `page.tsx`.
+- `src/ground/`: the main page. `choreography.ts` (timing and the `/>` spring), `shard-world.ts` (the rigid-body step), `shard-physics.ts` (bake and live play), `shatter.ts` and `shatter-worker.ts` (fracture and bake off the main thread), `use-ground-cursor.ts`, `glass-title.ts`, `ground.ts`, `ground-copy.ts`, `layout.ts`, `shadow-light.ts`, `scene.tsx`, `page.tsx`.
 - `src/flat/`: the flat page. `scene.tsx` (typography, layout, choreography, timing), `background.ts` (Paper-derived color shapes and grain), `stage.ts` (rear text, reflective objects, upright grid), `page.tsx`.
 - `src/environment.ts`: bundled HDR loading.
 - `src/glass/create-glass.js`: refraction and glass parameters.
@@ -72,7 +72,7 @@ See [source credits](src/CREDITS.md).
 
 ## Art direction controls
 
-Click the settings icon beside Replay at the upper right to open **Type & scene**. The panel is hidden initially and Escape closes it. The hero/headline dropdown offers JetBrains Mono SemiBold (default), Space Grotesk SemiBold, Syne SemiBold, Geist Bold, Manrope SemiBold, Outfit Medium, Bodoni Moda SemiBold, Azeret Mono SemiBold, Chakra Petch SemiBold, Unbounded Medium, Space Mono Bold, and Oxanium SemiBold. Small labels can use IBM Plex Mono or Geist. All choices are bundled Glyph assets, including fracture-ready display outlines. Font changes preserve the animation position. Use Replay to compare their fracture behavior.
+Click the settings icon beside Replay at the upper right to open **Type & scene**. The panel is hidden initially and Escape closes it. The hero/headline dropdown offers JetBrains Mono SemiBold (default), Space Grotesk SemiBold, Syne SemiBold, Geist Bold, Manrope SemiBold, Outfit Medium, Bodoni Moda SemiBold, Azeret Mono SemiBold, Chakra Petch SemiBold, Unbounded Medium, Space Mono Bold, and Oxanium SemiBold. Small labels can use IBM Plex Mono or Geist. All choices are bundled Glyph assets, including fracture-ready display outlines. Only the selected fonts download, so another choice loads when it is picked. Font changes preserve the animation position. Use Replay to compare their fracture behavior.
 
 The panel also controls background colors, shape, flow speed, softness and grain; rear text size, position, depth, color and opacity; metal objects and orbit speed; rear text starts off by default; upright grid with crosshair spacing; HDR environment and rotation; glass refraction, dispersion, roughness, tint, optical depth, back-face pass, bevel, extrusion and tilt; fracture seed, cell count, impulse, and the opening hold before the break (0.7 seconds by default). Timing changes keep the later choreography and scrubber synchronized. The orange background color also colors the Breaking Changes heading. `src/ground/settings.tsx` and `src/flat/settings.tsx` hold the defaults. The live choices last for the current page session. The visible scene continues to use Glyph; the development panel itself is Leva's standard HTML UI.
 

@@ -2,7 +2,6 @@ import { Color, DoubleSide, MeshBasicNodeMaterial, type Node } from 'three/webgp
 import { color, mix, uniform } from 'three/tsl';
 import { defineTextMaterial } from '@pmndrs/glyph/three';
 import type { Typography } from './typography';
-import type { TypographySettings } from './controls';
 
 export type Tone = 'ink' | 'muted' | 'accent' | 'heading';
 type Opacity = Node<'float'>;
@@ -12,7 +11,7 @@ export type LabelOptions = { tone?: Tone; opacity?: Opacity; bold?: boolean; ali
  * Glyph labels whose tones share one theme blend, so all copy flips from dark to light together.
  * `depthTest` lets solid geometry hide labels that lie on a surface.
  */
-export function createLabels(typography: Typography, fonts: TypographySettings, onError: (error: unknown) => void, depthTest = false) {
+export function createLabels(typography: Typography, onError: (error: unknown) => void, depthTest = false) {
   const theme = uniform(0), headingColor = uniform(new Color());
   const ink = mix(color('#d1d0cd'), color('#24221f'), theme);
   const muted = mix(color('#818183'), color('#77716a'), theme);
@@ -31,7 +30,7 @@ export function createLabels(typography: Typography, fonts: TypographySettings, 
     /** Text positioned so its local origin is the alignment anchor at the vertical ink center. */
     create(text: string, fontSize: number, options: LabelOptions = {}) {
       const object = typography.handle.createText({
-        font: options.bold ? typography.display[fonts.displayFont] : typography.detail[fonts.detailFont],
+        font: options.bold ? typography.display : typography.detail,
         text, style: { fontSize, lineHeight: 1.1 },
         material: material(options.tone ?? 'ink', options.opacity),
       });

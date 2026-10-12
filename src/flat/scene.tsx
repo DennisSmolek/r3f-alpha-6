@@ -1,5 +1,5 @@
 import { traceStartup } from '../startup';
-import { use, useEffect, useLayoutEffect, useRef } from 'react';
+import { use, useDeferredValue, useEffect, useLayoutEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { glyph } from '@pmndrs/glyph';
 import { Group, Mesh, MeshBasicNodeMaterial, PlaneGeometry, Vector3, type WebGPURenderer } from 'three/webgpu';
@@ -7,7 +7,7 @@ import { uniform } from 'three/tsl';
 import { credits } from '../credits';
 import { animationDuration, choreographyTime, ease } from '../timeline';
 import { useCameraRig } from '../camera';
-import { fontsReady } from '../typography';
+import { loadTypography } from '../typography';
 import { createEnvironmentMap, studioReady } from '../environment';
 import { createStage } from './stage';
 import { createLabels, spreadRow, type LabelOptions } from '../labels';
@@ -27,7 +27,8 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
   onReady: () => void;
   onError: (error: unknown) => void;
 }) {
-  const typography = use(fontsReady);
+  // A font change keeps the current scene until the new font has loaded.
+  const typography = use(loadTypography(useDeferredValue(settings.displayFont), useDeferredValue(settings.detailFont), true));
   const studio = use(studioReady);
   const atmosphereTime = useRef(0);
   const flowTime = useRef(0);
@@ -35,7 +36,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
   const liveSettings = useRef(settings);
   liveSettings.current = settings;
   const updateCamera = useCameraRig(settings, playback, onCameraPose);
-  const { displayFont, detailFont, environment: environmentChoice, depth, bevel, fractureSeed, fragmentCount } = settings;
+  const { environment: environmentChoice, depth, bevel, fractureSeed, fragmentCount } = settings;
 
   useEffect(() => { invalidate(); }, [settings, invalidate]);
   const update = useRef<((time: number) => void) | null>(null);
@@ -58,7 +59,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     const geometries: { dispose(): void }[] = [];
     const materials: { dispose(): void }[] = [];
     const appear = uniform(0), alphaAppear = uniform(0);
-    const labels = createLabels(typography, { displayFont, detailFont }, onError);
+    const labels = createLabels(typography, onError);
     const label = (text: string, x: number, y: number, fontSize: number, options: LabelOptions & { depth?: number } = {}) => {
       const object = labels.create(text, fontSize, options);
       object.position.x += x;
@@ -74,10 +75,10 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     const title = new Group();
     title.position.set(0, titleY, 220);
     root.add(title);
-    const source = typography.handle.createText({ font: typography.display[displayFont], text: '<Canvas renderer />', style: { fontSize: 1 } });
+    const source = typography.handle.createText({ font: typography.display, text: '<Canvas renderer />', style: { fontSize: 1 } });
     const layout = source.glyphs();
     const fullWidth = layout.width;
-    const finalSource = typography.handle.createText({ font: typography.display[displayFont], text: '<Canvas />', style: { fontSize: 1 } });
+    const finalSource = typography.handle.createText({ font: typography.display, text: '<Canvas />', style: { fontSize: 1 } });
     const finalLayout = finalSource.glyphs();
     const finalWidth = finalLayout.width;
     const initialSize = Math.min(w * 0.87 / fullWidth, 112, h * 0.145);
@@ -214,7 +215,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
       scene.environment = previousEnvironment;
       environment.dispose();
     };
-  }, [size.width, size.height, displayFont, detailFont, environmentChoice, depth, bevel, fractureSeed, fragmentCount, studio, typography, scene, camera, renderer, playback, onReady, onError]);
+  }, [size.width, size.height, environmentChoice, depth, bevel, fractureSeed, fragmentCount, studio, typography, scene, camera, renderer, playback, onReady, onError]);
 
   useFrame(state => {
     const p = playback.current;

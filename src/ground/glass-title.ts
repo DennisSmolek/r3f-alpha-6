@@ -1,9 +1,11 @@
-import { Box3, Group, MeshBasicNodeMaterial, Mesh, Vector3, type BufferGeometry, type Material, type Object3D } from 'three/webgpu';
-import { extrude, fractureGlyph, glyphShapes, random } from '../fracture';
+import { Box3, BufferAttribute, BufferGeometry, Group, MeshBasicNodeMaterial, Mesh, Vector3, type Material, type Object3D } from 'three/webgpu';
+import { extrude, glyphShapes } from '../fracture';
 import { ease } from '../timeline';
+import { traceStartup } from '../startup';
 import { glide, impactTime, tagPose } from './choreography';
 import { bakeShards, type ShardLive } from './shard-physics';
-import type { Obstacle, Pusher } from './shard-world';
+import { physicsOptions, titleObstacles, type ShatterJob, type ShatterResult } from './shatter';
+import type { Pusher } from './shard-world';
 import { withShadow } from './shadow-light';
 import type { Typography } from '../typography';
 import type { GroundSettings } from './settings';
@@ -14,14 +16,15 @@ import type { GroundSettings } from './settings';
  * `duration` is how long the choreography runs after the strike. `fit` gives the world scale for a word
  * width, so the title grows from fitting `<Canvas renderer />` to fitting `<Canvas />` on narrow screens. Once it ends the shards switch to a live
  * simulation where a cursor sphere sweeps them and a click pops them up.
+ * The fracture and bake run in a worker, and `onShatter` fires when the shards arrive.
  */
-export function createGlassTitle(typography: Typography, material: Material, settings: GroundSettings, duration: number, fit: (width: number) => number) {
-  const { displayFont, depth, bevel, fractureSeed, fragmentCount } = settings;
+export function createGlassTitle(typography: Typography, material: Material, settings: GroundSettings, duration: number, fit: (width: number) => number, onShatter: () => void) {
+  const { depth, bevel, fractureSeed, fragmentCount } = settings;
   const root = new Group(), intact = new Group(), shardGroup = new Group(), tag = new Group();
   root.add(intact, shardGroup, tag);
-  const source = typography.handle.createText({ font: typography.display[displayFont], text: '<Canvas renderer />', style: { fontSize: 1 } });
+  const source = typography.handle.createText({ font: typography.display, text: '<Canvas renderer />', style: { fontSize: 1 } });
   const layout = source.glyphs();
-  const finalSource = typography.handle.createText({ font: typography.display[displayFont], text: '<Canvas />', style: { fontSize: 1 } });
+  const finalSource = typography.handle.createText({ font: typography.display, text: '<Canvas />', style: { fontSize: 1 } });
   const finalLayout = finalSource.glyphs();
   const ink = layout.inkBounds!;
   // The lowest ink touches the ground and the extrusion is centered on z = 0.
@@ -62,28 +65,44 @@ export function createGlassTitle(typography: Typography, material: Material, set
   tag.children.forEach(mesh => { mesh.position.x -= pivot; });
   const strike = intactBox.max.x - tagBox.min.x;
 
-  const rng = random(fractureSeed * 31 + 7);
-  const span = intactBox.max.x - intactBox.min.x;
-  const pieces = fractureGlyph(fractureShapes, fractureSeed, { cells: fragmentCount, depth, impact: [1, 0.45] }).map(piece => {
-    geometries.push(piece.geometry);
-    const mesh = withShadow(new Mesh(piece.geometry, material), shadowMaterial);
-    shardGroup.add(mesh);
-    const position = piece.center.clone().add(offset);
-    // 1 at the strike, 0 at the far end of the word.
-    const near = Math.max(0, Math.min(1, 1 - (intactBox.max.x - position.x) / span));
-    return {
-      mesh, position, geometry: piece.geometry, spin: piece.spin,
-      // Most pieces spray back behind the title so the copy in front stays readable.
-      launch: new Vector3(-(0.4 + 2.4 * near * rng()), 1.4 + (1 + 2 * near) * rng(), rng() < 0.75 ? -(0.6 + 2 * rng()) : 0.3 + 0.9 * rng()),
-      delay: (1 - near) * 0.08 + rng() * 0.02,
-    };
-  });
-
-  let physics: ReturnType<typeof bakeShards> | undefined, physicsKey = '';
+  const job: Omit<ShatterJob, 'physics'> = {
+    shapes: fractureShapes.map(shape => shape.toJSON()), offset: offset.toArray(), word: { min: intactBox.min.toArray(), max: intactBox.max.toArray() },
+    seed: fractureSeed, cells: fragmentCount, depth, duration,
+    opening: opening.map(({ box, travel }) => ({ min: box.min.toArray(), max: box.max.toArray(), travel })),
+    tag: { min: tagBox.min.toArray(), max: tagBox.max.toArray(), strike, travel: tagTravel },
+  };
   let pose: ReturnType<typeof tagPose> | undefined, poseKey = '';
   let live: ShardLive | undefined, last: Vector3 | undefined;
   const pusher: Pusher = { center: new Vector3(), velocity: new Vector3(), radius: 1 };
-
+  let worker: Worker | undefined, baked: ReturnType<typeof bakeShards> | undefined, physicsKey = '', warm = false;
+  let shards: { mesh: Object3D; geometry: BufferGeometry }[] = [];
+  /** Breaks `renderer` off the main thread and swaps in the new shards when they arrive. */
+  const shatter = (physics: ShatterJob['physics']) => {
+    worker?.terminate();
+    const request = { ...job, physics };
+    worker = new Worker(new URL('./shatter-worker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = ({ data }: MessageEvent<ShatterResult>) => {
+      worker?.terminate();
+      worker = undefined;
+      shards.forEach(({ mesh, geometry }) => { shardGroup.remove(mesh); geometry.dispose(); });
+      shards = data.shards.map(shard => {
+        const geometry = new BufferGeometry();
+        shard.attributes.forEach(([name, array, size]) => geometry.setAttribute(name, new BufferAttribute(array, size)));
+        const mesh = withShadow(new Mesh(geometry, material), shadowMaterial);
+        shardGroup.add(mesh);
+        return { mesh, geometry };
+      });
+      baked = bakeShards(data.shards.map((shard, i) => ({
+        geometry: shards[i].geometry, delay: shard.delay,
+        position: new Vector3().fromArray(shard.position), velocity: new Vector3().fromArray(shard.velocity), spin: new Vector3().fromArray(shard.spin),
+      })), titleObstacles(request), physicsOptions(request), data.track);
+      live = undefined;
+      warm = true;
+      traceStartup('Shards ready');
+      onShatter();
+    };
+    worker.postMessage(request);
+  };
   return { root,
     /**
      * Poses everything for choreography time `t`, re-simulating only when a motion setting changes.
@@ -98,17 +117,10 @@ export function createGlassTitle(typography: Typography, material: Material, set
       const key = [settings.explosion, settings.gravity, settings.bounce, settings.friction, settings.shardCollisions].join();
       if (physicsKey !== key) {
         physicsKey = key;
-        const obstacles: Obstacle[] = opening.map(({ box, travel }, i) => ({ min: box.min, max: box.max, offset: time => travel * glide(time + impactTime, i, opening.length) }));
-        obstacles.push({ min: tagBox.min, max: tagBox.max, offset: time => pose!(time + impactTime).x });
-        physics = bakeShards(pieces.map(piece => ({
-          geometry: piece.geometry, position: piece.position, delay: piece.delay,
-          velocity: piece.launch.clone().multiplyScalar(settings.explosion),
-          spin: piece.spin.clone().multiplyScalar(settings.explosion),
-        })), obstacles, { duration, gravity: settings.gravity, bounce: settings.bounce, friction: settings.friction, collide: settings.shardCollisions });
-        live = undefined;
+        shatter({ windup: settings.windup, explosion: settings.explosion, gravity: settings.gravity, bounce: settings.bounce, friction: settings.friction, shardCollisions: settings.shardCollisions });
       }
-      if (t - impactTime < duration - 1e-3) live = last = undefined;
-      else live ??= physics!.live();
+      if (!baked || t - impactTime < duration - 1e-3) live = last = undefined;
+      else live ??= baked.live();
       if (live && cursor) {
         const point = root.worldToLocal(cursor.clone());
         if (last) pusher.velocity.subVectors(point, last).divideScalar(Math.max(delta, 1 / 60)).clampLength(0, 14);
@@ -126,10 +138,22 @@ export function createGlassTitle(typography: Typography, material: Material, set
       tag.rotation.z = now.lean;
       tag.scale.set(1 + now.squash, 1 - now.squash * 0.6, 1);
       intact.visible = t < impactTime;
-      shardGroup.visible = !intact.visible;
-      if (shardGroup.visible) pieces.forEach(({ mesh }, i) => live ? live.pose(i, mesh.position, mesh.quaternion) : physics!.sample(t - impactTime, i, mesh.position, mesh.quaternion));
+      // New shards draw once at a speck's size before the strike so their first real frame doesn't stall.
+      shardGroup.visible = !intact.visible || warm;
+      warm = false;
+      if (shardGroup.visible) shards.forEach(({ mesh }, i) => {
+        mesh.scale.setScalar(intact.visible ? 1e-4 : 1);
+        if (live) live.pose(i, mesh.position, mesh.quaternion);
+        else baked?.sample(t - impactTime, i, mesh.position, mesh.quaternion);
+      });
       return live?.awake() ?? false;
     },
-    dispose() { geometries.forEach(geometry => geometry.dispose()); shadowMaterial.dispose(); },
+    /** True once the first shards have arrived. */
+    get shattered() { return !!baked; },
+    dispose() {
+      worker?.terminate();
+      [...geometries, ...shards.map(({ geometry }) => geometry)].forEach(geometry => geometry.dispose());
+      shadowMaterial.dispose();
+    },
   };
 }

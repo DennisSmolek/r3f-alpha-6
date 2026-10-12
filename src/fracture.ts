@@ -29,7 +29,7 @@ export function glyphShapes(layout: GlyphLayoutInspection, index: number) {
   if (!shapes.length) return shapes;
   // Variable fonts can retain overlapping or self-intersecting contours. Normalize before extrusion.
   return polygonShapes(polygonClipping.union(shapes.map(shape => {
-    const points = shape.extractPoints(32);
+    const points = shape.extractPoints(8);
     return [ring(points.shape), ...points.holes.map(ring)];
   })));
 
@@ -67,7 +67,7 @@ function polygonShapes(polygons: Polygon[]) {
 export function extrude(shapes: Shape[], bevel = 0.012, depth = 0.22, smooth = true) {
   const geometry = new ExtrudeGeometry(shapes, {
     depth, steps: 1, bevelEnabled: bevel > 0,
-    bevelSegments: 8, bevelSize: bevel, bevelThickness: bevel, curveSegments: 32,
+    bevelSegments: 5, bevelSize: bevel, bevelThickness: bevel, curveSegments: 32,
   });
   if (smooth) {
     // Unit-size font outlines need finer welding than the normal helper's 0.01 grid.

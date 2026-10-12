@@ -19,7 +19,7 @@ export function createStage(width: number, height: number, typography: Typograph
     material.opacityNode = context.shader.opacity.mul(textOpacity);
     return material;
   });
-  const text = typography.handle.createText({ font: typography.thin, text: 'R3F V10', style: { fontSize: Math.min(width * 0.18, 225) }, material: textMaterial });
+  const text = typography.handle.createText({ font: typography.thin!, text: 'R3F V10', style: { fontSize: Math.min(width * 0.18, 225) }, material: textMaterial });
   const metrics = text.glyphs(), bounds = metrics.inkBounds!;
   const textGroup = new Group();
   text.position.set(-metrics.width / 2, bounds.y + bounds.height / 2, 0);

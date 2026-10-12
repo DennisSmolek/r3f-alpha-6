@@ -13,10 +13,13 @@ import { Credits, SiteLinks } from '../shell/site-links';
 import { AnnouncementCopy } from '../shell/announcement-copy';
 import { DesignControls } from '../shell/design-controls';
 import { Loader } from '../shell/loader';
+import { loadTypography } from '../typography';
 
 export default function AnnouncementPage() {
   const { settings, setCameraPose } = useSceneSettings();
   const duration = animationDuration(settings.breakDelay);
+  // Fonts download while the canvas starts. The scene reads the same cached load.
+  loadTypography(settings.displayFont, settings.detailFont, true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const support = useWebGPUSupport();
   const [error, setError] = useState(false);

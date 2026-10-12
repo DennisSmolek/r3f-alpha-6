@@ -1,10 +1,10 @@
 import { traceStartup } from '../startup';
-import { use, useEffect, useLayoutEffect, useRef } from 'react';
+import { use, useDeferredValue, useEffect, useLayoutEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { glyph } from '@pmndrs/glyph';
 import { MathUtils, type PerspectiveCamera, type WebGPURenderer } from 'three/webgpu';
 import { useCameraRig } from '../camera';
-import { fontsReady } from '../typography';
+import { loadTypography } from '../typography';
 import { createEnvironmentMap, studioReady } from '../environment';
 import { createGlass } from '../glass/create-glass';
 import { updateGlass } from '../glass/update-glass';
@@ -32,7 +32,8 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   onReady: () => void;
   onError: (error: unknown) => void;
 }) {
-  const typography = use(fontsReady);
+  // A font change keeps the current scene until the new font has loaded.
+  const typography = use(loadTypography(useDeferredValue(settings.displayFont), useDeferredValue(settings.detailFont)));
   const studio = use(studioReady);
   const { scene, camera, renderer, size, invalidate } = useThree();
   const live = useRef(settings);
@@ -47,7 +48,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   const distance = size.height / 2 / Math.tan(MathUtils.degToRad(fov / 2));
   const readCursor = useGroundCursor();
   const updateCamera = useCameraRig(settings, playback, onCameraPose, { distance, pitch: [14, 70], pointerPitch: [10, 80] });
-  const { environment, displayFont, detailFont, depth, bevel, fractureSeed, fragmentCount, cameraPitch } = settings;
+  const { environment, depth, bevel, fractureSeed, fragmentCount, cameraPitch } = settings;
   const layout = groundLayout(size.width, size.height, fov, distance, cameraPitch);
   const titleAt = layout.at(0, size.height * (size.width < 650 ? 0.09 : 0.04));
   const titlePixel = layout.scale(titleAt);
@@ -86,7 +87,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     const glass = createGlass(renderer, scene, camera);
     // The backdrop pass shows the horizon wherever no ground is drawn.
     glass.config.background = parts.current.ground?.horizon;
-    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime, width => Math.min(size.width * 0.84 / width, 112, size.height * 0.15) * titlePixel);
+    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime, width => Math.min(size.width * 0.84 / width, 112, size.height * 0.15) * titlePixel, invalidate);
     title.root.position.copy(titleAt);
     scene.add(title.root);
     parts.current.glass = glass;
@@ -98,7 +99,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
       parts.current.title = parts.current.glass = undefined;
     };
   // Title rebuilds follow the geometry settings, not every panel change.
-  }, [renderer, scene, camera, typography, size.width, size.height, displayFont, depth, bevel, fractureSeed, fragmentCount, titleAt.x, titleAt.z, titlePixel]);
+  }, [renderer, scene, camera, invalidate, typography, size.width, size.height, depth, bevel, fractureSeed, fragmentCount, titleAt.x, titleAt.z, titlePixel]);
 
   useLayoutEffect(() => {
     const copy = createGroundCopy(typography, live.current, onError, groundLayout(size.width, size.height, fov, distance, cameraPitch), size.width, size.height);
@@ -110,7 +111,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
       glyph.shape();
       parts.current.copy = undefined;
     };
-  }, [scene, typography, onError, size.width, size.height, fov, distance, cameraPitch, displayFont, detailFont]);
+  }, [scene, typography, onError, size.width, size.height, fov, distance, cameraPitch]);
 
   useLayoutEffect(() => {
     traceStartup('Compiling ground scene', 0.95);
@@ -126,7 +127,10 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   useFrame(state => {
     const p = playback.current;
     const s = live.current;
-    if (p.ready && p.playing && !document.hidden) p.time = Math.min(animationDuration(s.breakDelay), p.time + Math.min(state.delta, 0.05));
+    const { ground, title, copy, glass } = parts.current;
+    // The opening hold lasts until the shards arrive from the worker.
+    const end = title?.shattered || p.time > s.breakDelay ? animationDuration(s.breakDelay) : s.breakDelay;
+    if (p.ready && p.playing && !document.hidden) p.time = Math.min(end, p.time + Math.min(state.delta, 0.05));
     if (s.animate && !p.reduced && !document.hidden) {
       clock.current.atmosphere += Math.min(state.delta, 0.05);
       clock.current.flow += Math.min(state.delta, 0.05) * s.speed;
@@ -134,7 +138,6 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     }
     updateCamera(state.delta);
     const t = choreographyTime(p.time, s.breakDelay);
-    const { ground, title, copy, glass } = parts.current;
     const light = ease(t, impactTime, impactTime + 2.1);
     ground?.update(s, light);
     if (ground) ground.time.value = clock.current.flow;

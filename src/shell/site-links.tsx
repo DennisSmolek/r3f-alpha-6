@@ -10,8 +10,8 @@ export function SiteLinks() {
   return <>
     <a className="hit-area logo-link" data-hit="logo" href="https://pmnd.rs" aria-label="Poimandres"><PoimandresMark /><span>Poimandres</span></a>
     <nav className="primary-links" aria-label="Explore React Three Fiber">
-      <a className="hit-area" data-hit="docs" href="https://r3f.docs.pmnd.rs/getting-started/introduction"><span>Docs</span></a>
-      <a className="hit-area" data-hit="examples" href="https://r3f.docs.pmnd.rs/getting-started/examples"><span>Examples</span></a>
+      <a className="hit-area" data-hit="docs" href="https://r3f.docs.pmnd.rs/next/getting-started/introduction"><span>Docs</span></a>
+      <a className="hit-area" data-hit="examples" href="https://r3f.docs.pmnd.rs/next/getting-started/examples"><span>Examples</span></a>
       <LegacyLink />
     </nav>
   </>;

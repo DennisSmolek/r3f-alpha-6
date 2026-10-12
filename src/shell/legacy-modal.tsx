@@ -129,7 +129,7 @@ export function LegacyLink() {
         <h3 className="legacy-why">Why make it a break?</h3>
         <p>The new renderer from three.js already falls back to WebGL 2 on its own. Its core, its node materials and the systems around them are still young though, and existing shaders, materials and post-processing don't carry over one to one. Rather than swap renderers under your feet, we made WebGPU the default and kept WebGL one prop away.</p>
         <div className="legacy-actions">
-          <a className="legacy-primary" href="https://r3f.docs.pmnd.rs/getting-started/webgl">Read the WebGL guide <span aria-hidden="true">→</span></a>
+          <a className="legacy-primary" href="https://r3f.docs.pmnd.rs/next/migration/v10#do-i-need-to-switch-to-webgpu?">Read the WebGL guide <span aria-hidden="true">→</span></a>
           <button type="button" onClick={close}>Got it</button>
         </div>
       </div>

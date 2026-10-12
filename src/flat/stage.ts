@@ -1,9 +1,9 @@
 import { Color, DoubleSide, Group, Mesh, MeshBasicNodeMaterial, MeshPhysicalNodeMaterial, PlaneGeometry, SphereGeometry, TorusGeometry } from 'three/webgpu';
 import { smoothstep, uniform, uv } from 'three/tsl';
 import { defineTextMaterial } from '@pmndrs/glyph/three';
-import { gridPattern } from './grid';
-import { TRANSMISSION_BACKDROP_LAYER } from './glass/transmissionBackdrop';
-import type { Typography } from './typography';
+import { gridPattern } from '../grid';
+import { TRANSMISSION_BACKDROP_LAYER } from '../glass/transmissionBackdrop';
+import type { Typography } from '../typography';
 import type { SceneSettings } from './settings';
 
 /** Layered text and grid with metal geometry reserved for the refraction pass. */

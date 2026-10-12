@@ -1,6 +1,6 @@
 import { Mesh, MeshBasicNodeMaterial, PlaneGeometry } from 'three/webgpu';
 import { color, float, mix, positionGeometry, screenCoordinate, screenSize, smoothstep, uniform, uv, vec2, vec4 } from 'three/tsl';
-import { grainGradient } from './grain-gradient';
+import { grainGradient } from '../grain-gradient';
 
 /** Full-screen grain gradient that fades up from the dark intro. */
 export function createBackground(width: number, height: number) {

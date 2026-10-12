@@ -17,11 +17,13 @@ import { createGround } from './ground';
 import { createShadowLight } from './shadow-light';
 import { createGlassTitle } from './glass-title';
 import { createGroundCopy } from './ground-copy';
+import { useGroundCursor } from './use-ground-cursor';
 import type { GroundSettings } from './settings';
 
 /**
  * Glass type standing on a gradient floor. The camera looks down at the floor, and the remaining copy is
  * printed flat on it. Each part is built in its own effect so a setting only rebuilds what depends on it.
+ * After the intro the cursor sweeps the settled shards and a click pops them up.
  */
 export function GroundScene({ playback, settings, onCameraPose, onReady, onError }: {
   playback: React.RefObject<Playback>;
@@ -43,10 +45,11 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   const fov = (camera as PerspectiveCamera).fov;
   // At this distance one world unit at the target is one screen pixel.
   const distance = size.height / 2 / Math.tan(MathUtils.degToRad(fov / 2));
+  const readCursor = useGroundCursor();
   const updateCamera = useCameraRig(settings, playback, onCameraPose, { distance, pitch: [14, 70], pointerPitch: [10, 80] });
   const { environment, displayFont, detailFont, depth, bevel, fractureSeed, fragmentCount, cameraPitch } = settings;
   const layout = groundLayout(size.width, size.height, fov, distance, cameraPitch);
-  const titleAt = layout.at(0, size.height * 0.04);
+  const titleAt = layout.at(0, size.height * (size.width < 650 ? 0.09 : 0.04));
   const titlePixel = layout.scale(titleAt);
 
   useEffect(() => { invalidate(); }, [settings, invalidate]);
@@ -83,8 +86,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     const glass = createGlass(renderer, scene, camera);
     // The backdrop pass shows the horizon wherever no ground is drawn.
     glass.config.background = parts.current.ground?.horizon;
-    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime);
-    title.root.scale.setScalar(Math.min(size.width * 0.84 / title.width, 112, size.height * 0.15) * titlePixel);
+    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime, width => Math.min(size.width * 0.84 / width, 112, size.height * 0.15) * titlePixel);
     title.root.position.copy(titleAt);
     scene.add(title.root);
     parts.current.glass = glass;
@@ -138,8 +140,10 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     if (ground) ground.time.value = clock.current.flow;
     scene.environmentRotation.set(0, s.environmentRotation * Math.PI / 180, 0);
     if (glass) updateGlass(glass, s, clock.current.atmosphere);
-    title?.update(t, s);
+    const cursor = readCursor();
+    if (title?.update(t, s, state.delta, s.cursorCollider ? cursor.point : undefined, s.cursorCollider ? cursor.press : undefined)) invalidate();
     copy?.update(t, Math.min(1, p.time / animationDuration(s.breakDelay)), s);
+    copy?.follow(camera as PerspectiveCamera, renderer.domElement);
     glyph.shape();
     if (p.ready) captureTransmissionBackdrop(renderer, scene, camera, state.elapsed);
   }, { priority: 1 });

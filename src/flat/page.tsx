@@ -1,17 +1,17 @@
-import { traceStartup } from './startup';
+import { traceStartup } from '../startup';
 import { Suspense, useCallback, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { NoToneMapping } from 'three/webgpu';
 import { useSceneSettings } from './settings';
-import { animationDuration, choreographyTime } from './timeline';
+import { animationDuration, choreographyTime } from '../timeline';
 import { AnnouncementScene } from './scene';
-import { SceneBoundary } from './shell/scene-boundary';
-import { useWebGPUSupport } from './shell/use-webgpu-support';
-import { usePlayback } from './shell/use-playback';
-import { PlaybackControls, Scrubber } from './shell/playback-controls';
-import { Credits, SiteLinks } from './shell/site-links';
-import { AnnouncementCopy } from './shell/announcement-copy';
-import { DesignControls } from './shell/design-controls';
+import { SceneBoundary } from '../shell/scene-boundary';
+import { useWebGPUSupport } from '../shell/use-webgpu-support';
+import { usePlayback } from '../shell/use-playback';
+import { PlaybackControls, Scrubber } from '../shell/playback-controls';
+import { Credits, SiteLinks } from '../shell/site-links';
+import { AnnouncementCopy } from '../shell/announcement-copy';
+import { DesignControls } from '../shell/design-controls';
 
 export default function AnnouncementPage() {
   const { settings, setCameraPose } = useSceneSettings();
@@ -29,7 +29,7 @@ export default function AnnouncementPage() {
   const onError = useCallback((error: unknown) => { console.error('Announcement:', error); setError(true); }, []);
   const fallback = support === 'no' || error;
   return (
-    <main ref={page} className={`announcement ${light ? 'is-light' : ''} ${fallback ? 'is-fallback' : ''}`} aria-label="React Three Fiber v10 Alpha 6 announcement">
+    <main ref={page} className={`announcement ${light ? 'is-light' : ''} ${fallback ? 'is-fallback' : ''} ${player.ready && !fallback ? 'is-tracked' : ''}`} aria-label="React Three Fiber v10 Alpha 6 announcement">
       {!fallback && support === 'yes' && (
         <SceneBoundary onError={onError}>
           <Canvas frameloop={player.paused && (!settings.animate || player.reducedMotion) && (settings.cameraMode !== 'Pointer' || player.reducedMotion || settings.parallax === 0) ? 'demand' : 'always'} onCreated={({ renderer }) => {

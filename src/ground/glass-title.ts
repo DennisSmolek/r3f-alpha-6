@@ -1,7 +1,9 @@
 import { Box3, Group, MeshBasicNodeMaterial, Mesh, Vector3, type BufferGeometry, type Material, type Object3D } from 'three/webgpu';
 import { extrude, fractureGlyph, glyphShapes, random } from '../fracture';
+import { ease } from '../timeline';
 import { glide, impactTime, tagPose } from './choreography';
-import { bakeShards, type Obstacle } from './shard-physics';
+import { bakeShards, type ShardLive } from './shard-physics';
+import type { Obstacle, Pusher } from './shard-world';
 import { withShadow } from './shadow-light';
 import type { Typography } from '../typography';
 import type { GroundSettings } from './settings';
@@ -9,9 +11,11 @@ import type { GroundSettings } from './settings';
 /**
  * `<Canvas renderer />` in glass, standing on the ground at y = 0 in em units. `/>` winds up and strikes
  * `renderer`, whose shards fall under a baked simulation while `<Canvas` glides over to meet `/>`.
- * `duration` is how long the choreography runs after the strike.
+ * `duration` is how long the choreography runs after the strike. `fit` gives the world scale for a word
+ * width, so the title grows from fitting `<Canvas renderer />` to fitting `<Canvas />` on narrow screens. Once it ends the shards switch to a live
+ * simulation where a cursor sphere sweeps them and a click pops them up.
  */
-export function createGlassTitle(typography: Typography, material: Material, settings: GroundSettings, duration: number) {
+export function createGlassTitle(typography: Typography, material: Material, settings: GroundSettings, duration: number, fit: (width: number) => number) {
   const { displayFont, depth, bevel, fractureSeed, fragmentCount } = settings;
   const root = new Group(), intact = new Group(), shardGroup = new Group(), tag = new Group();
   root.add(intact, shardGroup, tag);
@@ -48,6 +52,7 @@ export function createGlassTitle(typography: Typography, material: Material, set
     if (cluster > 15) { tag.add(mesh); tagBox.union(box); tagTravel = travel; }
     else { root.add(mesh); opening.push({ mesh, travel, box }); }
   }
+  const [startScale, endScale] = [fit(layout.width), fit(finalLayout.width)];
   source.dispose();
   finalSource.dispose();
 
@@ -76,10 +81,15 @@ export function createGlassTitle(typography: Typography, material: Material, set
 
   let physics: ReturnType<typeof bakeShards> | undefined, physicsKey = '';
   let pose: ReturnType<typeof tagPose> | undefined, poseKey = '';
+  let live: ShardLive | undefined, last: Vector3 | undefined;
+  const pusher: Pusher = { center: new Vector3(), velocity: new Vector3(), radius: 1 };
 
-  return { root, width: layout.width,
-    /** Poses everything for choreography time `t`, re-simulating only when a motion setting changes. */
-    update(t: number, settings: GroundSettings) {
+  return { root,
+    /**
+     * Poses everything for choreography time `t`, re-simulating only when a motion setting changes.
+     * `cursor` and `press` are world points on the ground. Returns true while live shards are moving.
+     */
+    update(t: number, settings: GroundSettings, delta = 0, cursor?: Vector3, press?: Vector3) {
       if (poseKey !== String(settings.windup)) {
         poseKey = String(settings.windup);
         pose = tagPose(settings.windup, strike, tagTravel);
@@ -95,7 +105,21 @@ export function createGlassTitle(typography: Typography, material: Material, set
           velocity: piece.launch.clone().multiplyScalar(settings.explosion),
           spin: piece.spin.clone().multiplyScalar(settings.explosion),
         })), obstacles, { duration, gravity: settings.gravity, bounce: settings.bounce, friction: settings.friction, collide: settings.shardCollisions });
+        live = undefined;
       }
+      if (t - impactTime < duration - 1e-3) live = last = undefined;
+      else live ??= physics!.live();
+      if (live && cursor) {
+        const point = root.worldToLocal(cursor.clone());
+        if (last) pusher.velocity.subVectors(point, last).divideScalar(Math.max(delta, 1 / 60)).clampLength(0, 14);
+        else pusher.velocity.set(0, 0, 0);
+        pusher.center.copy(point);
+        pusher.radius = settings.cursorSize;
+        last = point;
+      } else last = undefined;
+      if (live && press) live.kick(root.worldToLocal(press.clone()), settings.cursorSize * 4, 1);
+      live?.advance(Math.min(delta, 0.05), cursor && pusher);
+      root.scale.setScalar(startScale + (endScale - startScale) * ease(t, impactTime + 0.1, impactTime + 1.2));
       opening.forEach(({ mesh, travel }, i) => { mesh.position.x = offset.x + travel * glide(t, i, opening.length); });
       const now = pose!(t);
       tag.position.x = pivot + now.x;
@@ -103,7 +127,8 @@ export function createGlassTitle(typography: Typography, material: Material, set
       tag.scale.set(1 + now.squash, 1 - now.squash * 0.6, 1);
       intact.visible = t < impactTime;
       shardGroup.visible = !intact.visible;
-      if (shardGroup.visible) pieces.forEach(({ mesh }, i) => physics!.sample(t - impactTime, i, mesh.position, mesh.quaternion));
+      if (shardGroup.visible) pieces.forEach(({ mesh }, i) => live ? live.pose(i, mesh.position, mesh.quaternion) : physics!.sample(t - impactTime, i, mesh.position, mesh.quaternion));
+      return live?.awake() ?? false;
     },
     dispose() { geometries.forEach(geometry => geometry.dispose()); shadowMaterial.dispose(); },
   };

@@ -1,8 +1,9 @@
-import { Group, Mesh, MeshBasicNodeMaterial, PlaneGeometry, Shape, ShapeGeometry, Vector2, type BufferGeometry, type Object3D } from 'three/webgpu';
+import { Group, MathUtils, Mesh, MeshBasicNodeMaterial, PlaneGeometry, Shape, ShapeGeometry, Vector2, type BufferGeometry, type Object3D, type PerspectiveCamera } from 'three/webgpu';
 import { uniform } from 'three/tsl';
 import { credits } from '../credits';
 import { ease } from '../timeline';
 import { createLabels, type LabelOptions } from '../labels';
+import { createHitAreas } from '../shell/hit-areas';
 import { impactTime } from './choreography';
 import type { Typography } from '../typography';
 import type { GroundLayout } from './layout';
@@ -11,10 +12,12 @@ import type { GroundSettings } from './settings';
 /**
  * Announcement copy printed flat on the ground. Each item sits under the same screen position as the flat
  * layout, sized in pixels, so the HTML hit areas still line up. `copyStretch` lengthens type along the
- * ground like road markings so distant lines stay legible.
+ * ground like road markings so distant lines stay legible. The top heading stays upright on the screen,
+ * and `footerOnGround` moves the credits between the ground and the screen.
  */
 export function createGroundCopy(typography: Typography, settings: GroundSettings, onError: (error: unknown) => void, layout: GroundLayout, w: number, h: number) {
-  const root = new Group();
+  const root = new Group(), screen = new Group(), hits = createHitAreas();
+  root.add(screen);
   const labels = createLabels(typography, settings, onError, true);
   const appear = uniform(0), alphaAppear = uniform(0);
   const compact = w < 650;
@@ -27,14 +30,22 @@ export function createGroundCopy(typography: Typography, settings: GroundSetting
     const group = new Group();
     group.position.set(point.x, 2, point.z);
     group.rotation.x = -Math.PI / 2;
-    group.add(...children);
+    if (children.length) group.add(...children);
     root.add(group);
     patches.push({ group, scale: layout.scale(point), slant: layout.slant(point) });
     return group;
   };
-  const label = (text: string, x: number, y: number, fontSize: number, options: LabelOptions = {}) => {
+  /** A point on the screen plane that follows the camera, one unit per pixel. */
+  const pin = (x: number, y: number, ...children: Object3D[]) => {
+    const group = new Group();
+    group.position.set(x, y, 0);
+    if (children.length) group.add(...children);
+    screen.add(group);
+    return group;
+  };
+  const label = (text: string, x: number, y: number, fontSize: number, options: LabelOptions = {}, at = place) => {
     const object = labels.create(text, fontSize, options);
-    place(x, y, object);
+    at(x, y, object);
     return object;
   };
   const plane = (width: number, height: number, color: string, opacity = 1) => {
@@ -45,8 +56,8 @@ export function createGroundCopy(typography: Typography, settings: GroundSetting
     return new Mesh(geometry, material);
   };
 
-  label('-  B R E A K I N G   C H A N G E S  -', 0, h / 2 - 46, compact ? 9 : 10, { tone: 'heading' });
-  label('REACT THREE FIBER', -w / 2 + 32, h / 2 - 46, 10, { tone: 'muted', align: 'left' }).visible = !compact;
+  label('-  B R E A K I N G   C H A N G E S  -', 0, h / 2 - 46, compact ? 9 : 10, { tone: 'heading' }, pin);
+  label('REACT THREE FIBER', -w / 2 + 32, h / 2 - 46, 10, { tone: 'muted', align: 'left' }, pin).visible = !compact;
 
   const versionSize = compact ? 17 : 21;
   const version = labels.create('r3f v10', versionSize);
@@ -66,23 +77,36 @@ export function createGroundCopy(typography: Typography, settings: GroundSetting
   markMaterial.colorNode = labels.ink;
   geometries.push(markGeometry);
   materials.push(markMaterial);
-  place(0, -h * 0.286, new Mesh(markGeometry, markMaterial));
+  hits.add('logo', place(0, -h * 0.286, new Mesh(markGeometry, markMaterial)), 0, 0, 56, 56);
 
-  const links = place(0, -h * 0.353, labels.create('Docs', 14), labels.create('Examples', 14), labels.create('/', 12, { tone: 'muted' }));
+  const docs = labels.create('Docs', 14), examples = labels.create('Examples', 14);
+  const links = place(0, -h * 0.353, docs, examples, labels.create('/', 12, { tone: 'muted' }));
   [-54, 48, -3].forEach((x, i) => { links.children[i].position.x += x; });
+  hits.add('docs', links, -54, 0, docs.measure().width + 40, 44);
+  hits.add('examples', links, 48, 0, examples.measure().width + 24, 44);
 
   const trackWidth = compact ? 190 : 226;
   const track = plane(trackWidth, 2, '#77716a', 0.18), progress = plane(trackWidth, 2, '#ed582c');
   progress.position.z = 0.1;
   place(0, -h * 0.407, track, progress);
 
+  // Each footer item rides in a carrier that moves between a spot on the ground and one on the screen.
+  const footer: { carrier: Group; ground: Group; screen: Group }[] = [];
+  const foot = (text: string, x: number, y: number, fontSize: number, options: LabelOptions = {}) => {
+    const object = labels.create(text, fontSize, { tone: 'muted', ...options });
+    const carrier = new Group();
+    carrier.add(object);
+    footer.push({ carrier, ground: place(x, y), screen: pin(x, y) });
+    return object;
+  };
   const footY = -h / 2 + 29;
   credits.forEach(([text], i) => {
     const x = compact ? (i < 3 ? (i - 1) * (w - 32) / 3 : (i - 3.5) * (w - 32) / 2) : [-210, -130, -20, 90, 190][i];
-    label(text, x, compact ? -h / 2 + (i < 3 ? 42 : 14) : footY, compact ? 9 : 11, { tone: 'muted' });
+    const credit = foot(text, x, compact ? -h / 2 + (i < 3 ? 42 : 14) : footY, compact ? 9 : 11);
+    hits.add(`credit-${i}`, credit.parent!, 0, 0, credit.measure().width + 20, compact ? 28 : 38);
   });
-  label('BUILT WITH', -w / 2 + 32, footY, 9, { tone: 'muted', align: 'left' }).visible = w > 800;
-  label('ALPHA 6', w / 2 - 32, footY, 9, { tone: 'muted', align: 'right' }).visible = w > 800;
+  foot('BUILT WITH', -w / 2 + 32, footY, 9, { align: 'left' }).visible = w > 800;
+  foot('ALPHA 6', w / 2 - 32, footY, 9, { align: 'right' }).visible = w > 800;
 
   return { root,
     /** `t` is choreography time and `amount` is overall intro progress from 0 to 1. */
@@ -97,8 +121,18 @@ export function createGroundCopy(typography: Typography, settings: GroundSetting
       progress.scale.x = Math.max(0.001, amount);
       progress.position.x = -trackWidth * (1 - progress.scale.x) / 2;
       for (const { group, scale, slant } of patches) group.scale.set(scale, scale * (1 + (1 / slant - 1) * settings.copyStretch), scale);
+      for (const spot of footer) (settings.footerOnGround ? spot.ground : spot.screen).add(spot.carrier);
+    },
+    /** Holds the screen copy just past the near plane, facing the camera at one unit per pixel, then moves the link hit areas. */
+    follow(camera: PerspectiveCamera, canvas: HTMLCanvasElement) {
+      const near = camera.near * 2;
+      screen.position.set(0, 0, -near).applyQuaternion(camera.quaternion).add(camera.position);
+      screen.quaternion.copy(camera.quaternion);
+      screen.scale.setScalar(2 * near * Math.tan(MathUtils.degToRad(camera.fov / 2)) / camera.zoom / h);
+      hits.update(camera, canvas);
     },
     dispose() {
+      hits.dispose();
       labels.dispose();
       geometries.forEach(geometry => geometry.dispose());
       materials.forEach(material => material.dispose());

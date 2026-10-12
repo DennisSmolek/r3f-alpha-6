@@ -1,23 +1,24 @@
-import { traceStartup } from './startup';
+import { traceStartup } from '../startup';
 import { use, useEffect, useLayoutEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { glyph } from '@pmndrs/glyph';
 import { Group, Mesh, MeshBasicNodeMaterial, PlaneGeometry, Vector3, type WebGPURenderer } from 'three/webgpu';
 import { uniform } from 'three/tsl';
-import { credits } from './credits';
-import { animationDuration, choreographyTime, ease } from './timeline';
-import { useCameraRig } from './camera';
-import { fontsReady } from './typography';
-import { createEnvironmentMap, studioReady } from './environment';
+import { credits } from '../credits';
+import { animationDuration, choreographyTime, ease } from '../timeline';
+import { useCameraRig } from '../camera';
+import { fontsReady } from '../typography';
+import { createEnvironmentMap, studioReady } from '../environment';
 import { createStage } from './stage';
-import { createLabels, type LabelOptions } from './labels';
+import { createLabels, type LabelOptions } from '../labels';
 import type { CameraPose, SceneSettings } from './settings';
-import type { Playback } from './shell/use-playback';
-import { extrude, fractureGlyph, glyphShapes } from './fracture';
+import type { Playback } from '../shell/use-playback';
+import { createHitAreas } from '../shell/hit-areas';
+import { extrude, fractureGlyph, glyphShapes } from '../fracture';
 import { createBackground } from './background';
-import { createGlass } from './glass/create-glass';
-import { updateGlass } from './glass/update-glass';
-import { captureTransmissionBackdrop } from './glass/transmissionBackdrop';
+import { createGlass } from '../glass/create-glass';
+import { updateGlass } from '../glass/update-glass';
+import { captureTransmissionBackdrop } from '../glass/transmissionBackdrop';
 
 export function AnnouncementScene({ playback, settings, onCameraPose, onReady, onError }: {
   playback: React.RefObject<Playback>;
@@ -127,8 +128,9 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     label('is now', 0, -h * 0.118, compact ? 14 : 16, { tone: 'muted', opacity: appear, depth: 20 });
     label('WebGPU First', 0, -h * 0.182, Math.min(compact ? w * 0.087 : 50, h * 0.065), { bold: true, opacity: appear, depth: 65 });
 
-    label('Docs', -54, -h * 0.353, 14);
-    label('Examples', 48, -h * 0.353, 14);
+    const hits = createHitAreas();
+    hits.add('docs', root, -54, -h * 0.353, label('Docs', -54, -h * 0.353, 14).measure().width + 40, 44, -100);
+    hits.add('examples', root, 48, -h * 0.353, label('Examples', 48, -h * 0.353, 14).measure().width + 24, 44, -100);
     label('/', -3, -h * 0.353, 12, { tone: 'muted' });
 
     const trackWidth = compact ? 190 : 226;
@@ -147,7 +149,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     credits.forEach(([text], i) => {
       const x = compact ? (i < 3 ? (i - 1) * (w - 32) / 3 : (i - 3.5) * (w - 32) / 2) : [-210, -130, -20, 90, 190][i];
       const y = compact ? -h / 2 + (i < 3 ? 42 : 14) : footY;
-      label(text, x, y, footSize, { tone: 'muted' });
+      hits.add(`credit-${i}`, root, x, y, label(text, x, y, footSize, { tone: 'muted' }).measure().width + 20, compact ? 28 : 38, -100);
     });
     label('BUILT WITH', -w / 2 + 32, footY, 9, { tone: 'muted', align: 'left' }).visible = w > 800;
     label('ALPHA 6', w / 2 - 32, footY, 9, { tone: 'muted', align: 'right' }).visible = w > 800;
@@ -184,6 +186,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
       const amount = Math.max(0.001, Math.min(1, elapsed / animationDuration(settings.breakDelay)));
       progress.scale.x = amount;
       progress.position.x = -trackWidth * (1 - amount) / 2;
+      hits.update(camera, renderer.domElement);
       glyph.shape();
     };
     update.current(playback.current.time);
@@ -196,6 +199,7 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     return () => {
       alive = false;
       update.current = null;
+      hits.dispose();
       root.removeFromParent();
       labels.dispose();
       glyph.shape();

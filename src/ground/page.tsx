@@ -30,7 +30,7 @@ export default function GroundPage() {
   const onError = useCallback((error: unknown) => { console.error('Announcement:', error); setError(true); }, []);
   const fallback = support === 'no' || error;
   return (
-    <main ref={page} className={`announcement is-ground ${light ? 'is-light' : ''} ${fallback ? 'is-fallback' : ''}`} aria-label="React Three Fiber v10 Alpha 6 announcement">
+    <main ref={page} className={`announcement is-ground ${light ? 'is-light' : ''} ${fallback ? 'is-fallback' : ''} ${player.ready && !fallback ? 'is-tracked' : ''}`} aria-label="React Three Fiber v10 Alpha 6 announcement">
       {!fallback && support === 'yes' && (
         <SceneBoundary onError={onError}>
           <Canvas frameloop={player.paused && (!settings.animate || player.reducedMotion) && (settings.cameraMode !== 'Pointer' || player.reducedMotion || settings.parallax === 0) ? 'demand' : 'always'} onCreated={({ renderer }) => {

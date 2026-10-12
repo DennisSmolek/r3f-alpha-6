@@ -61,5 +61,8 @@ a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid 
 .design-controls[hidden] { display: none; }
 .playback-controls button[aria-expanded="true"] { opacity: 1; background: #88888820; }
 
+/* While a scene tracks the link hit areas, each link is placed over its drawn text relative to the page. */
+.is-tracked :is(.primary-links, .credits) { position: static; transform: none; }
+
 /* The ground layout draws the Poimandres mark on the floor. The link keeps its hit area. */
 .is-ground:not(.is-fallback) .logo-link svg { visibility: hidden; }

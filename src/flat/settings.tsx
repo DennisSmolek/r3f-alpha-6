@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { button, folder, useControls } from 'leva';
-import { backgroundControls, cameraControls, exportSettings, fractureControls, glassControls, gridControls, typographyControls } from './controls';
-import type { BackgroundSettings, CameraSettings, FractureSettings, GlassSettings, GridSettings, TypographySettings } from './controls';
+import { backgroundControls, cameraControls, exportSettings, fractureControls, glassControls, gridControls, typographyControls } from '../controls';
+import type { BackgroundSettings, CameraSettings, FractureSettings, GlassSettings, GridSettings, TypographySettings } from '../controls';
 
 export type SceneSettings = CameraSettings & TypographySettings & BackgroundSettings & GridSettings & GlassSettings & FractureSettings & {
   tiltX: number; tiltY: number;
@@ -41,7 +41,7 @@ export function useSceneSettings() {
     Fracture: folder(fractureControls(), { collapsed: true }),
   }), []);
   const settings = values as SceneSettings;
-  actions.current.export = () => exportSettings(settings, 'r3f-alpha-6-settings.json');
+  actions.current.export = () => exportSettings(settings, 'r3f-alpha-6-flat-settings.json');
   actions.current.resetCamera = () => set(camera);
   return { settings, setCameraPose: (pose: CameraPose) => set(pose) };
 }

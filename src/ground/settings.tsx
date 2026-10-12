@@ -4,8 +4,8 @@ import { backgroundControls, cameraControls, exportSettings, fractureControls, g
 import type { BackgroundSettings, CameraSettings, FractureSettings, GlassSettings, GridSettings, TypographySettings } from '../controls';
 
 export type GroundSettings = CameraSettings & TypographySettings & BackgroundSettings & GridSettings & GlassSettings & FractureSettings & {
-  shadowOpacity: number; copyStretch: number;
-  windup: number; gravity: number; bounce: number; friction: number; shardCollisions: boolean;
+  shadowOpacity: number; copyStretch: number; footerOnGround: boolean;
+  windup: number; gravity: number; bounce: number; friction: number; shardCollisions: boolean; cursorCollider: boolean; cursorSize: number;
 };
 
 export function useGroundSettings() {
@@ -20,6 +20,7 @@ export function useGroundSettings() {
       ...gridControls(),
       shadowOpacity: { label: 'Shadow', value: 0.5, min: 0, max: 1, step: 0.01 },
       copyStretch: { label: 'Copy stretch', value: 0.35, min: 0, max: 1, step: 0.01 },
+      footerOnGround: { label: 'Footer on ground', value: true },
     }, { collapsed: true }),
     'Glass & lighting': folder(glassControls(), { collapsed: true }),
     'Strike & shards': folder({
@@ -29,10 +30,12 @@ export function useGroundSettings() {
       bounce: { label: 'Bounce', value: 0.25, min: 0, max: 0.8, step: 0.01 },
       friction: { label: 'Friction', value: 0.6, min: 0, max: 1.5, step: 0.05 },
       shardCollisions: { label: 'Shard spheres', value: true },
+      cursorCollider: { label: 'Cursor collider', value: true },
+      cursorSize: { label: 'Cursor size (em)', value: 0.3, min: 0.1, max: 1, step: 0.05 },
     }, { collapsed: true }),
   }), []);
   const settings = values as GroundSettings;
-  actions.current.export = () => exportSettings(settings, 'r3f-alpha-6-ground-settings.json');
+  actions.current.export = () => exportSettings(settings, 'r3f-alpha-6-settings.json');
   actions.current.resetCamera = () => set(camera);
   return { settings, setCameraPose: (pose: Pick<CameraSettings, 'cameraYaw' | 'cameraPitch' | 'cameraZoom'>) => set(pose) };
 }

@@ -29,6 +29,6 @@ export function PlaybackControls({ player, fallback, settingsOpen, onSettingsOpe
 
 /** The transparent range input over the scene's progress bar. */
 export function Scrubber({ player, duration, fallback }: { player: Player; duration: number; fallback: boolean }) {
-  return <input ref={player.progress} className="timeline" type="range" min="0" max={duration} step="0.01" defaultValue="0" aria-label="Animation progress" disabled={!player.ready || fallback}
+  return <input ref={player.progress} className="timeline" data-hit="timeline" type="range" min="0" max={duration} step="0.01" defaultValue="0" aria-label="Animation progress" disabled={!player.ready || fallback}
     onInput={event => player.scrub(Number(event.currentTarget.value))} />;
 }

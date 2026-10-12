@@ -113,12 +113,12 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   }, [scene, typography, onError, size.width, size.height, fov, distance, cameraPitch, displayFont, detailFont]);
 
   useLayoutEffect(() => {
-    traceStartup('Building ground scene');
+    traceStartup('Compiling ground scene', 0.95);
     let alive = true;
     // Compile the complete page before releasing the intro clock.
     // Skip effects torn down by StrictMode before starting asynchronous GPU work.
     Promise.resolve().then(() => alive ? (renderer as WebGPURenderer).compileAsync(scene, camera) : undefined).then(() => {
-      if (alive) { traceStartup('Scene ready'); onReady(); }
+      if (alive) { traceStartup('Scene ready', 1); onReady(); }
     }).catch(error => { if (alive) onError(error); });
     return () => { alive = false; };
   }, [renderer, scene, camera, onReady, onError]);

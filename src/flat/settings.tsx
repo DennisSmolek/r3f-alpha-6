@@ -17,6 +17,7 @@ export function useSceneSettings() {
   const camera: CameraSettings = { cameraMode: 'Pointer', cameraYaw: 0, cameraPitch: 0, cameraZoom: 1, parallax: 1, pointerX: 8, pointerY: 5, cameraSmoothing: 6, orbitSpeed: 0.5 };
   const [values, set] = useControls(() => ({
     'Export settings': button(() => actions.current.export()),
+    'Open ground layout': button(() => { location.href = './'; }),
     Camera: folder(cameraControls(camera, [-45, 45], () => actions.current.resetCamera())),
     Typography: folder(typographyControls(), { collapsed: true }),
     Background: folder(backgroundControls(), { collapsed: true }),

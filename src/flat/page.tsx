@@ -12,6 +12,7 @@ import { PlaybackControls, Scrubber } from '../shell/playback-controls';
 import { Credits, SiteLinks } from '../shell/site-links';
 import { AnnouncementCopy } from '../shell/announcement-copy';
 import { DesignControls } from '../shell/design-controls';
+import { Loader } from '../shell/loader';
 
 export default function AnnouncementPage() {
   const { settings, setCameraPose } = useSceneSettings();
@@ -33,14 +34,14 @@ export default function AnnouncementPage() {
       {!fallback && support === 'yes' && (
         <SceneBoundary onError={onError}>
           <Canvas frameloop={player.paused && (!settings.animate || player.reducedMotion) && (settings.cameraMode !== 'Pointer' || player.reducedMotion || settings.parallax === 0) ? 'demand' : 'always'} onCreated={({ renderer }) => {
-            traceStartup('Canvas ready');
+            traceStartup('Canvas ready', 0.6);
             if (!(renderer as unknown as { backend?: { isWebGPUBackend?: boolean } }).backend?.isWebGPUBackend) onError(new Error('A native WebGPU backend is required'));
           }} orthographic camera={{ position: [0, 0, 1000], near: 0.1, far: 2500, zoom: 1 }} dpr={[1, 1.75]} renderer={{ antialias: true, alpha: false, toneMapping: NoToneMapping }}>
             <Suspense fallback={null}><AnnouncementScene settings={settings} onCameraPose={setCameraPose} playback={player.playback} onReady={player.onReady} onError={onError} /></Suspense>
           </Canvas>
         </SceneBoundary>
       )}
-      {!player.ready && !fallback && <div className="loading" role="status" aria-label="Loading glass and typography"><span /></div>}
+      {!fallback && <Loader ready={player.ready} />}
       <AnnouncementCopy fallback={fallback} error={error} />
       {!fallback && <DesignControls open={settingsOpen} />}
       <PlaybackControls player={player} fallback={fallback} settingsOpen={settingsOpen} onSettingsOpen={setSettingsOpen} />

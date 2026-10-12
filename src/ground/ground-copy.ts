@@ -2,7 +2,7 @@ import { Group, MathUtils, Mesh, MeshBasicNodeMaterial, PlaneGeometry, Shape, Sh
 import { uniform } from 'three/tsl';
 import { credits } from '../credits';
 import { ease } from '../timeline';
-import { createLabels, type LabelOptions } from '../labels';
+import { createLabels, spreadRow, type LabelOptions } from '../labels';
 import { createHitAreas } from '../shell/hit-areas';
 import { impactTime } from './choreography';
 import type { Typography } from '../typography';
@@ -79,16 +79,16 @@ export function createGroundCopy(typography: Typography, settings: GroundSetting
   materials.push(markMaterial);
   hits.add('logo', place(0, -h * 0.286, new Mesh(markGeometry, markMaterial)), 0, 0, 56, 56);
 
-  const docs = labels.create('Docs', 14), examples = labels.create('Examples', 14);
-  const links = place(0, -h * 0.353, docs, examples, labels.create('/', 12, { tone: 'muted' }));
-  [-54, 48, -3].forEach((x, i) => { links.children[i].position.x += x; });
-  hits.add('docs', links, -54, 0, docs.measure().width + 40, 44);
-  hits.add('examples', links, 48, 0, examples.measure().width + 24, 44);
+  const links = ['Docs', '/', 'Examples', '/', 'WebGL'].map(text => text === '/' ? labels.create(text, 12, { tone: 'muted' }) : labels.create(text, 14));
+  const centers = spreadRow(links, 18);
+  const row = place(0, -h * 0.353, ...links);
+  ['docs', 'examples', 'webgl'].forEach((key, i) => hits.add(key, row, centers[i * 2], 0, links[i * 2].measure().width + 28, 44));
 
   const trackWidth = compact ? 190 : 226;
   const track = plane(trackWidth, 2, '#77716a', 0.18), progress = plane(trackWidth, 2, '#ed582c');
   progress.position.z = 0.1;
-  place(0, -h * 0.407, track, progress);
+  // The scrubber's thumb travels its width minus the 9 px thumb, so it spans the drawn track.
+  hits.add('timeline', place(0, -h * 0.407, track, progress), 0, 0, trackWidth + 9, 32);
 
   // Each footer item rides in a carrier that moves between a spot on the ground and one on the screen.
   const footer: { carrier: Group; ground: Group; screen: Group }[] = [];

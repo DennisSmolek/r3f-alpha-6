@@ -29,7 +29,7 @@ export const fontsReady = glyph.init().then(async () => {
   const [geistBold, geistRegular, space, syne, plex, thin, manrope, outfit, bodoni, azeret, chakra, unbounded, spaceMono, oxanium, jetBrains] = await Promise.all(
     [geistBoldUrl, geistRegularUrl, spaceUrl, syneUrl, plexUrl, thinUrl, manropeUrl, outfitUrl, bodoniUrl, azeretUrl, chakraUrl, unboundedUrl, spaceMonoUrl, oxaniumUrl, jetBrainsUrl].map(url => glyph.fontFace(url, { format: slug }).load()),
   );
-  traceStartup('Fonts ready');
+  traceStartup('Fonts ready', 0.22);
   return {
     thin,
     display: { 'Space Grotesk': space, Syne: syne, Geist: geistBold, Manrope: manrope, Outfit: outfit, 'Bodoni Moda': bodoni, 'Azeret Mono': azeret, 'Chakra Petch': chakra, Unbounded: unbounded, 'Space Mono': spaceMono, Oxanium: oxanium, 'JetBrains Mono': jetBrains },

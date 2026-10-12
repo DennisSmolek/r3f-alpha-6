@@ -48,3 +48,15 @@ export function createLabels(typography: Typography, fonts: TypographySettings, 
     },
   };
 }
+
+/** Lays centered labels out in a row around x = 0 with `gap` between neighbors and returns each label's center. */
+export function spreadRow(row: { position: { x: number }; measure(): { width: number } }[], gap: number) {
+  const widths = row.map(object => object.measure().width);
+  let x = -(widths.reduce((sum, width) => sum + width) + gap * (row.length - 1)) / 2;
+  return row.map((object, i) => {
+    const center = x + widths[i] / 2;
+    object.position.x += center;
+    x += widths[i] + gap;
+    return center;
+  });
+}

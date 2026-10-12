@@ -10,7 +10,7 @@ import { useCameraRig } from '../camera';
 import { fontsReady } from '../typography';
 import { createEnvironmentMap, studioReady } from '../environment';
 import { createStage } from './stage';
-import { createLabels, type LabelOptions } from '../labels';
+import { createLabels, spreadRow, type LabelOptions } from '../labels';
 import type { CameraPose, SceneSettings } from './settings';
 import type { Playback } from '../shell/use-playback';
 import { createHitAreas } from '../shell/hit-areas';
@@ -129,9 +129,9 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     label('WebGPU First', 0, -h * 0.182, Math.min(compact ? w * 0.087 : 50, h * 0.065), { bold: true, opacity: appear, depth: 65 });
 
     const hits = createHitAreas();
-    hits.add('docs', root, -54, -h * 0.353, label('Docs', -54, -h * 0.353, 14).measure().width + 40, 44, -100);
-    hits.add('examples', root, 48, -h * 0.353, label('Examples', 48, -h * 0.353, 14).measure().width + 24, 44, -100);
-    label('/', -3, -h * 0.353, 12, { tone: 'muted' });
+    const links = ['Docs', '/', 'Examples', '/', 'WebGL'].map(text => text === '/' ? label(text, 0, -h * 0.353, 12, { tone: 'muted' }) : label(text, 0, -h * 0.353, 14));
+    const centers = spreadRow(links, 18);
+    ['docs', 'examples', 'webgl'].forEach((key, i) => hits.add(key, root, centers[i * 2], -h * 0.353, links[i * 2].measure().width + 28, 44, -100));
 
     const trackWidth = compact ? 190 : 226;
     const trackMaterial = new MeshBasicNodeMaterial({ color: '#77716a', transparent: true, opacity: 0.18, toneMapped: false });
@@ -144,6 +144,8 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     track.position.set(0, -h * 0.407, 100);
     progress.position.set(0, -h * 0.407, 101);
     root.add(track, progress);
+    // The scrubber's thumb travels its width minus the 9 px thumb, so it spans the drawn track.
+    hits.add('timeline', root, 0, -h * 0.407, trackWidth + 9, 24, 100);
     const footSize = compact ? 9 : 11;
     const footY = -h / 2 + 29;
     credits.forEach(([text], i) => {
@@ -190,11 +192,12 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
       glyph.shape();
     };
     update.current(playback.current.time);
+    traceStartup('Compiling scene', 0.95);
     let alive = true;
     // Compile the complete page before releasing the intro clock.
     // Skip effects torn down by StrictMode before starting asynchronous GPU work.
     Promise.resolve().then(() => alive ? (renderer as WebGPURenderer).compileAsync(scene, camera) : undefined).then(() => {
-      if (alive) { traceStartup('Scene ready'); onReady(); }
+      if (alive) { traceStartup('Scene ready', 1); onReady(); }
     }).catch(error => { if (alive) onError(error); });
     return () => {
       alive = false;

@@ -13,6 +13,7 @@ export function useGroundSettings() {
   const camera: CameraSettings = { cameraMode: 'Pointer', cameraYaw: 0, cameraPitch: 30, cameraZoom: 1, parallax: 1, pointerX: 8, pointerY: 5, cameraSmoothing: 6, orbitSpeed: 0.5 };
   const [values, set] = useControls(() => ({
     'Export settings': button(() => actions.current.export()),
+    'Open flat layout': button(() => { location.href = 'flat.html'; }),
     Camera: folder(cameraControls(camera, [14, 70], () => actions.current.resetCamera())),
     Typography: folder(typographyControls(), { collapsed: true }),
     Ground: folder({

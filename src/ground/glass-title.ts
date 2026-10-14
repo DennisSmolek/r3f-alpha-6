@@ -1,4 +1,4 @@
-import { Box3, BufferAttribute, BufferGeometry, Group, MeshBasicNodeMaterial, Mesh, Vector3, type Material, type Object3D } from 'three/webgpu';
+import { Box3, BufferAttribute, BufferGeometry, Color, Group, MeshBasicNodeMaterial, Mesh, Vector3, type Material, type Object3D } from 'three/webgpu';
 import { extrude, glyphShapes, sitOnGround } from '../fracture';
 import { ease } from '../timeline';
 import { traceStartup } from '../startup';
@@ -7,6 +7,7 @@ import { bakeShards, type ShardLive } from './shard-physics';
 import { physicsOptions, titleObstacles, type ShatterJob, type ShatterResult } from './shatter';
 import type { Pusher } from './shard-world';
 import { withShadow } from './shadow-light';
+import { causticCast } from './caustics';
 import type { Typography } from '../typography';
 import type { GroundSettings } from './settings';
 
@@ -31,6 +32,7 @@ export function createGlassTitle(typography: Typography, material: Material, set
   const offset = new Vector3(-layout.width / 2, ink.y + ink.height, 0);
   const geometries: BufferGeometry[] = [];
   const shadowMaterial = new MeshBasicNodeMaterial();
+  shadowMaterial.castShadowNode = causticCast((material as unknown as { color: Color }).color);
   const opening: { mesh: Object3D; travel: number; box: Box3 }[] = [];
   const tagBox = new Box3(), intactBox = new Box3();
   const fractureShapes: ReturnType<typeof glyphShapes> = [];

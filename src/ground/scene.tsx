@@ -71,6 +71,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     projection.far = distance * 40;
     projection.updateProjectionMatrix();
     (renderer as WebGPURenderer).shadowMap.enabled = true;
+    (renderer as WebGPURenderer).shadowMap.transmitted = true;
     const ground = createGround(size.width, size.height, distance * 16);
     const light = createShadowLight(Math.max(size.width, size.height) * 1.2);
     scene.add(ground.root, light);

@@ -1,7 +1,8 @@
-import { Color, Group, Mesh, MeshBasicNodeMaterial, PlaneGeometry, ShadowNodeMaterial } from 'three/webgpu';
+import { Color, Group, Mesh, MeshBasicNodeMaterial, PlaneGeometry } from 'three/webgpu';
 import { color, float, mix, positionWorld, screenCoordinate, screenSize, smoothstep, uniform, vec2 } from 'three/tsl';
 import { grainGradient } from '../grain-gradient';
 import { gridPattern } from '../grid';
+import { CausticReceiverMaterial } from './caustics';
 import type { GroundSettings } from './settings';
 
 /**
@@ -27,7 +28,8 @@ export function createGround(width: number, height: number, extent: number) {
   const geometry = new PlaneGeometry(extent * 2, extent * 2);
   const floor = new Mesh(geometry, material);
   floor.rotation.x = -Math.PI / 2;
-  const shadowMaterial = new ShadowNodeMaterial({ color: '#2c2620', transparent: true, opacity: 0.2, depthWrite: false });
+  const shadowStrength = uniform(0.7);
+  const shadowMaterial = new CausticReceiverMaterial(shadowStrength);
   const shadows = new Mesh(geometry, shadowMaterial);
   shadows.rotation.x = -Math.PI / 2;
   shadows.position.y = 1;
@@ -47,7 +49,7 @@ export function createGround(width: number, height: number, extent: number) {
       gridColor.value.set(settings.gridColor);
       crosshairOpacity.value = settings.crosshairs ? 1 : 0;
       crosshairSpacing.value = settings.crosshairSpacing;
-      shadowMaterial.opacity = settings.shadowOpacity * (0.35 + 0.65 * light);
+      shadowStrength.value = Math.min(1, settings.shadowOpacity * (0.35 + 0.65 * light) * 4);
     },
     dispose() { geometry.dispose(); material.dispose(); shadowMaterial.dispose(); },
   };

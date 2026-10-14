@@ -1,4 +1,4 @@
-import { DirectionalLight, Group, Mesh, MeshBasicNodeMaterial } from 'three/webgpu';
+import { DirectionalLight, Group, HalfFloatType, Mesh, MeshBasicNodeMaterial } from 'three/webgpu';
 
 /**
  * A high key light whose soft shadows tie the glass to the ground. `span` is the shadowed area in world units.
@@ -10,6 +10,8 @@ export function createShadowLight(span: number) {
   light.castShadow = true;
   light.shadow.mapSize.set(1024, 1024);
   light.shadow.radius = 4;
+  // Half floats let the transmitted shadow carry caustics brighter than 1.
+  light.shadow.mapType = HalfFloatType;
   light.shadow.bias = -0.0005;
   const camera = light.shadow.camera;
   camera.layers.set(2);

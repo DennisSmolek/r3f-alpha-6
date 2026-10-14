@@ -22,7 +22,7 @@ export function useSceneSettings() {
     Typography: folder(typographyControls(), { collapsed: true }),
     Background: folder(backgroundControls(), { collapsed: true }),
     'Behind the glass': folder({
-      rearText: { label: 'R3F V10', value: false },
+      rearText: { label: 'R3F V10', value: true },
       rearTextColor: { label: 'Text color', value: '#333e45' },
       rearTextOpacity: { label: 'Text opacity', value: 0.65, min: 0, max: 1, step: 0.01 },
       rearTextScale: { label: 'Text scale', value: 0.85, min: 0.4, max: 2, step: 0.05 },
@@ -36,8 +36,8 @@ export function useSceneSettings() {
     Ground: folder(gridControls(), { collapsed: true }),
     'Glass & lighting': folder({
       ...glassControls(),
-      tiltX: { label: 'Tilt X', value: 8, min: -25, max: 25, step: 1 },
-      tiltY: { label: 'Tilt Y', value: -12, min: -25, max: 25, step: 1 },
+      tiltX: { label: 'Tilt X', value: 4, min: -25, max: 25, step: 1 },
+      tiltY: { label: 'Tilt Y', value: -6, min: -25, max: 25, step: 1 },
     }, { collapsed: true }),
     Fracture: folder(fractureControls(), { collapsed: true }),
   }), []);

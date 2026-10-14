@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { glyph, slug } from '@pmndrs/glyph';
 import { ThreeConfig } from '@pmndrs/glyph/three';
 import { Quaternion, Vector3 } from 'three/webgpu';
-import { fractureGlyph, glyphShapes } from '../fracture.ts';
+import { fractureGlyph, glyphShapes, sitOnGround } from '../fracture.ts';
 import { impactTime, tagOffset } from './choreography.ts';
 import { bakeShards } from './shard-physics.ts';
 
@@ -17,7 +17,7 @@ test('the closing tag winds up, strikes renderer at the impact, and settles besi
   assert.ok(Math.abs(tagOffset(4, windup, strike, rest) - rest) < 0.01, 'it comes to rest at its final slot');
 });
 
-test('renderer shards fall, settle flat on the ground, stay out of the standing letters, and react to the cursor', async () => {
+test('renderer shards fall, settle flat on the ground, stay out of the remaining letters, and react to the cursor', async () => {
   await glyph.init();
   const bytes = await readFile(new URL('../assets/JetBrainsMono-SemiBold.font.glb', import.meta.url));
   const font = await glyph.fontFace(new Blob([bytes]), { format: slug }).load();
@@ -28,14 +28,18 @@ test('renderer shards fall, settle flat on the ground, stay out of the standing 
   const lift = ink.y + ink.height;
   const shapes = Array.from({ length: layout.glyphCount }, (_, i) => glyphShapes(layout, i)).flat();
   const pieces = fractureGlyph(shapes, 177, { cells: 48, depth: 0.22, impact: [1, 0.45] });
-  const shards = pieces.map((piece, i) => ({
-    geometry: piece.geometry,
-    position: piece.center.clone().add(new Vector3(0, lift, -0.11)),
-    velocity: new Vector3(-1.5, 2.5 + (i % 5) * 0.4, i % 2 ? 1.2 : -1.2),
-    spin: piece.spin, delay: piece.delay,
-  }));
-  // A letter standing just left of the word, like the `s` of `<Canvas`.
-  const letter = { min: new Vector3(-0.7, 0, -0.13), max: new Vector3(-0.1, 0.75, 0.13), offset: () => 0 };
+  const shards = pieces.map((piece, i) => {
+    const geometry = sitOnGround(piece.geometry.translate(piece.center.x, piece.center.y + lift, piece.center.z));
+    const position = geometry.boundingBox!.getCenter(new Vector3());
+    geometry.translate(-position.x, -position.y, -position.z);
+    return {
+      geometry, position,
+      velocity: new Vector3(-1.5, 2.5 + (i % 5) * 0.4, i % 2 ? 1.2 : -1.2),
+      spin: piece.spin, delay: piece.delay,
+    };
+  });
+  // A letter lying just left of the word, like the `s` of `<Canvas`.
+  const letter = { min: new Vector3(-1.6, 0, -0.35), max: new Vector3(-1.0, 0.22, 0.35), offset: () => 0 };
   const physics = bakeShards(shards, [letter], { duration: 4, gravity: 9, bounce: 0.25, friction: 0.6, collide: true });
   const position = new Vector3(), quaternion = new Quaternion();
   const restsOnGround = (i: number) => {
@@ -48,7 +52,8 @@ test('renderer shards fall, settle flat on the ground, stay out of the standing 
   for (let i = 0; i < shards.length; i++) {
     physics.sample(4, i, position, quaternion);
     restsOnGround(i);
-    assert.ok(!(position.x > letter.min.x && position.x < letter.max.x && Math.abs(position.z) < letter.max.z && position.y < letter.max.y), `shard ${i} ended inside the letter`);
+    const onLetter = position.x > letter.min.x && position.x < letter.max.x && position.z > letter.min.z && position.z < letter.max.z;
+    assert.ok(!onLetter || position.y >= letter.max.y - 0.05, `shard ${i} should rest on or outside the letter, y ${position.y}`);
   }
   physics.sample(0.5, 0, position, quaternion);
   const moving = position.clone();

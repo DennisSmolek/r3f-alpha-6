@@ -1,5 +1,5 @@
 import { Box3, BufferAttribute, BufferGeometry, Group, MeshBasicNodeMaterial, Mesh, Vector3, type Material, type Object3D } from 'three/webgpu';
-import { extrude, glyphShapes } from '../fracture';
+import { extrude, glyphShapes, sitOnGround } from '../fracture';
 import { ease } from '../timeline';
 import { traceStartup } from '../startup';
 import { glide, impactTime, tagPose } from './choreography';
@@ -11,8 +11,8 @@ import type { Typography } from '../typography';
 import type { GroundSettings } from './settings';
 
 /**
- * `<Canvas renderer />` in glass, standing on the ground at y = 0 in em units. `/>` winds up and strikes
- * `renderer`, whose shards fall under a baked simulation while `<Canvas` glides over to meet `/>`.
+ * `<Canvas renderer />` in glass, lying on the ground at y = 0 in em units so the letter faces point up.
+ * `/>` winds up and strikes `renderer`, whose shards fall under a baked simulation while `<Canvas` glides over to meet `/>`.
  * `duration` is how long the choreography runs after the strike. `fit` gives the world scale for a word
  * width, so the title grows from fitting `<Canvas renderer />` to fitting `<Canvas />` on narrow screens. Once it ends the shards switch to a live
  * simulation where a cursor sphere sweeps them and a click pops them up.
@@ -27,23 +27,26 @@ export function createGlassTitle(typography: Typography, material: Material, set
   const finalSource = typography.handle.createText({ font: typography.display, text: '<Canvas />', style: { fontSize: 1 } });
   const finalLayout = finalSource.glyphs();
   const ink = layout.inkBounds!;
-  // The lowest ink touches the ground and the extrusion is centered on z = 0.
-  const offset = new Vector3(-layout.width / 2, ink.y + ink.height, -depth / 2);
+  // Glyph outlines sit in xy. After sitting on the ground the faces point up and the word is centered in xz.
+  const offset = new Vector3(-layout.width / 2, ink.y + ink.height, 0);
   const geometries: BufferGeometry[] = [];
   const shadowMaterial = new MeshBasicNodeMaterial();
   const opening: { mesh: Object3D; travel: number; box: Box3 }[] = [];
   const tagBox = new Box3(), intactBox = new Box3();
   const fractureShapes: ReturnType<typeof glyphShapes> = [];
-  let tagTravel = 0;
+  let tagTravel = 0, baseY: number | undefined;
+  // The settled `<Canvas />` closes up most of the word space so `/>` doesn't read as a hole.
+  const spaceAt = finalLayout.clusters.indexOf(7), tagAt = finalLayout.clusters.indexOf(8);
+  const tighten = spaceAt < 0 || tagAt < 0 ? 0 : (finalLayout.x[tagAt] - finalLayout.x[spaceAt]) * 0.6;
   for (let i = 0; i < layout.glyphCount; i++) {
     const cluster = layout.clusters[i];
     const shapes = glyphShapes(layout, i);
     if (!shapes.length) continue;
-    const geometry = extrude(shapes, bevel, depth);
+    const geometry = sitOnGround(extrude(shapes, bevel, depth).translate(0, offset.y, 0));
     geometries.push(geometry);
     const mesh = withShadow(new Mesh(geometry, material), shadowMaterial);
-    mesh.position.copy(offset);
-    const box = geometry.boundingBox!.clone().translate(offset);
+    mesh.position.set(offset.x, 0, 0);
+    const box = geometry.boundingBox!.clone().translate(mesh.position);
     if (cluster >= 8 && cluster < 16) {
       intact.add(mesh);
       intactBox.union(box);
@@ -51,11 +54,11 @@ export function createGlassTitle(typography: Typography, material: Material, set
       continue;
     }
     const finalIndex = Array.from(finalLayout.clusters).indexOf(cluster > 15 ? cluster - 9 : cluster);
-    const travel = finalLayout.x[finalIndex] - finalLayout.width / 2 - (layout.x[i] - layout.width / 2);
+    const travel = finalLayout.x[finalIndex] - finalLayout.width / 2 - (layout.x[i] - layout.width / 2) + (cluster > 15 ? -tighten / 2 : tighten / 2);
     if (cluster > 15) { tag.add(mesh); tagBox.union(box); tagTravel = travel; }
     else { root.add(mesh); opening.push({ mesh, travel, box }); }
   }
-  const [startScale, endScale] = [fit(layout.width), fit(finalLayout.width)];
+  const [startScale, endScale] = [fit(layout.width), fit(finalLayout.width - tighten)];
   source.dispose();
   finalSource.dispose();
 
@@ -132,11 +135,14 @@ export function createGlassTitle(typography: Typography, material: Material, set
       if (live && press) live.kick(root.worldToLocal(press.clone()), settings.cursorSize * 4, 1);
       live?.advance(Math.min(delta, 0.05), cursor && pusher);
       root.scale.setScalar(startScale + (endScale - startScale) * ease(t, impactTime + 0.1, impactTime + 1.2));
+      // Floating a little above the floor lets the shadow and the refraction read as glass.
+      baseY ??= root.position.y;
+      root.position.y = baseY + settings.lift * root.scale.x;
       opening.forEach(({ mesh, travel }, i) => { mesh.position.x = offset.x + travel * glide(t, i, opening.length); });
       const now = pose!(t);
       tag.position.x = pivot + now.x;
-      tag.rotation.z = now.lean;
-      tag.scale.set(1 + now.squash, 1 - now.squash * 0.6, 1);
+      tag.rotation.y = now.lean;
+      tag.scale.set(1 + now.squash, 1, 1 - now.squash * 0.6);
       intact.visible = t < impactTime;
       // New shards draw once at a speck's size before the strike so their first real frame doesn't stall.
       shardGroup.visible = !intact.visible || warm;

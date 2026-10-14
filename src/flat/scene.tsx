@@ -81,8 +81,8 @@ export function AnnouncementScene({ playback, settings, onCameraPose, onReady, o
     const finalSource = typography.handle.createText({ font: typography.display, text: '<Canvas />', style: { fontSize: 1 } });
     const finalLayout = finalSource.glyphs();
     const finalWidth = finalLayout.width;
-    const initialSize = Math.min(w * 0.87 / fullWidth, 112, h * 0.145);
-    const finalSize = Math.min(w * 0.78 / finalWidth, 154, h * 0.2);
+    const initialSize = Math.min(w * 0.94 / fullWidth, 168, h * 0.22);
+    const finalSize = Math.min(w * 0.88 / finalWidth, 220, h * 0.28);
     const centerY = -(layout.inkBounds!.y + layout.inkBounds!.height / 2);
     const letters: { mesh: Mesh; start: number; end: number }[] = [];
     const doomed = new Group();

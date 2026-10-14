@@ -2,7 +2,7 @@ import { traceStartup } from '../startup';
 import { use, useDeferredValue, useEffect, useLayoutEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { glyph } from '@pmndrs/glyph';
-import { MathUtils, type PerspectiveCamera, type WebGPURenderer } from 'three/webgpu';
+import { MathUtils, Vector2, Vector3, type DirectionalLight, type PerspectiveCamera, type WebGPURenderer } from 'three/webgpu';
 import { useCameraRig } from '../camera';
 import { loadTypography } from '../typography';
 import { createEnvironmentMap, studioReady } from '../environment';
@@ -21,7 +21,7 @@ import { useGroundCursor } from './use-ground-cursor';
 import type { GroundSettings } from './settings';
 
 /**
- * Glass type standing on a gradient floor. The camera looks down at the floor, and the remaining copy is
+ * Glass type lying on a gradient floor. The camera looks down at the floor, and the remaining copy is
  * printed flat on it. Each part is built in its own effect so a setting only rebuilds what depends on it.
  * After the intro the cursor sweeps the settled shards and a click pops them up.
  */
@@ -39,7 +39,10 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   const live = useRef(settings);
   live.current = settings;
   const clock = useRef({ atmosphere: 0, flow: 0 });
+  // The pointer eased in screen space, from -1 to 1. It swings the HDR and the key light.
+  const aim = useRef(new Vector2());
   const parts = useRef<{
+    key?: { light: DirectionalLight; home: Vector3 };
     ground?: ReturnType<typeof createGround>; title?: ReturnType<typeof createGlassTitle>;
     copy?: ReturnType<typeof createGroundCopy>; glass?: ReturnType<typeof createGlass>;
   }>({});
@@ -72,6 +75,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     const light = createShadowLight(Math.max(size.width, size.height) * 1.2);
     scene.add(ground.root, light);
     parts.current.ground = ground;
+    parts.current.key = { light, home: light.position.clone() };
     const previousBackground = scene.background;
     scene.background = ground.horizon;
     return () => {
@@ -79,7 +83,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
       light.dispose();
       ground.dispose();
       scene.background = previousBackground;
-      parts.current.ground = undefined;
+      parts.current.ground = parts.current.key = undefined;
     };
   }, [scene, camera, size.width, size.height, distance]);
 
@@ -87,7 +91,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     const glass = createGlass(renderer, scene, camera);
     // The backdrop pass shows the horizon wherever no ground is drawn.
     glass.config.background = parts.current.ground?.horizon;
-    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime, width => Math.min(size.width * 0.84 / width, 112, size.height * 0.15) * titlePixel, invalidate);
+    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime, width => Math.min(size.width * 0.97 / width, size.height * 0.5) * titlePixel, invalidate);
     title.root.position.copy(titleAt);
     scene.add(title.root);
     parts.current.glass = glass;
@@ -141,9 +145,20 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     const light = ease(t, impactTime, impactTime + 2.1);
     ground?.update(s, light);
     if (ground) ground.time.value = clock.current.flow;
-    scene.environmentRotation.set(0, s.environmentRotation * Math.PI / 180, 0);
-    if (glass) updateGlass(glass, s, clock.current.atmosphere);
     const cursor = readCursor();
+    const target = cursor.ndc && !p.reduced ? cursor.ndc : { x: 0, y: 0 };
+    aim.current.lerp(target as Vector2, 1 - Math.exp(-4 * Math.min(state.delta, 0.05)));
+    if (aim.current.distanceToSquared(target as Vector2) > 1e-5) invalidate();
+    const swing = aim.current.x * s.lightFollow;
+    scene.environmentRotation.set(0, (s.environmentRotation + aim.current.x * s.hdrFollow * 70) * Math.PI / 180, 0);
+    scene.environmentIntensity = s.environmentIntensity;
+    const { key } = parts.current;
+    if (key) {
+      key.light.intensity = s.lightIntensity;
+      const span = key.home.y;
+      key.light.position.set(key.home.x + swing * span * 0.6, key.home.y, key.home.z - aim.current.y * s.lightFollow * span * 0.5);
+    }
+    if (glass) updateGlass(glass, s, clock.current.atmosphere);
     if (title?.update(t, s, state.delta, s.cursorCollider ? cursor.point : undefined, s.cursorCollider ? cursor.press : undefined)) invalidate();
     copy?.update(t, Math.min(1, p.time / animationDuration(s.breakDelay)), s);
     copy?.follow(camera as PerspectiveCamera, renderer.domElement);

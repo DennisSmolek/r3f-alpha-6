@@ -1,5 +1,5 @@
 import { Shape, Vector3, type ShapeJSON } from 'three/webgpu';
-import { fractureGlyph, random } from '../fracture';
+import { fractureGlyph, random, sitOnGround } from '../fracture';
 import { glide, impactTime, tagPose } from './choreography';
 import { bakeShards } from './shard-physics';
 import type { Obstacle } from './shard-world';
@@ -19,7 +19,7 @@ export type ShatterResult = {
   track: Float32Array;
 };
 
-/** The standing letters as obstacles. `<Canvas` glides toward `/>` while `/>` springs back from the strike. */
+/** The remaining letters as obstacles. `<Canvas` glides toward `/>` while `/>` springs back from the strike. */
 export function titleObstacles({ opening, tag, physics }: ShatterJob): Obstacle[] {
   const pose = tagPose(physics.windup, tag.strike, tag.travel);
   const box = ({ min, max }: Box) => ({ min: new Vector3().fromArray(min), max: new Vector3().fromArray(max) });
@@ -44,12 +44,14 @@ export function shatterTitle(job: ShatterJob): ShatterResult {
   const [left, right] = [job.word.min[0], job.word.max[0]];
   const rng = random(job.seed * 31 + 7);
   const shards = fractureGlyph(job.shapes.map(json => new Shape().fromJSON(json)), job.seed, { cells: job.cells, depth: job.depth, impact: [1, 0.45] }).map(piece => {
-    const position = piece.center.clone().add(offset);
+    const geometry = sitOnGround(piece.geometry.translate(piece.center.x + offset.x, piece.center.y + offset.y, piece.center.z));
+    const position = geometry.boundingBox!.getCenter(new Vector3());
+    geometry.translate(-position.x, -position.y, -position.z);
     // 1 at the strike, 0 at the far end of the word.
     const near = Math.max(0, Math.min(1, 1 - (right - position.x) / (right - left)));
     return {
-      geometry: piece.geometry, position, spin: piece.spin.clone().multiplyScalar(physics.explosion),
-      velocity: new Vector3(-(0.4 + 2.4 * near * rng()), 1.4 + (1 + 2 * near) * rng(), rng() < 0.75 ? -(0.6 + 2 * rng()) : 0.3 + 0.9 * rng()).multiplyScalar(physics.explosion),
+      geometry, position, spin: piece.spin.clone().multiplyScalar(physics.explosion),
+      velocity: new Vector3(-(0.4 + 2.4 * near * rng()), 2.2 + (1 + 2.4 * near) * rng(), rng() < 0.75 ? -(0.6 + 2 * rng()) : 0.3 + 0.9 * rng()).multiplyScalar(physics.explosion),
       delay: (1 - near) * 0.08 + rng() * 0.02,
     };
   });

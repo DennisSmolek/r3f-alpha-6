@@ -38,7 +38,7 @@ export function cameraControls(pose: CameraSettings, pitch: [number, number], re
 
 export function typographyControls() {
   return {
-    displayFont: { label: 'Display font', value: 'JetBrains Mono', options: ['JetBrains Mono', 'Space Grotesk', 'Syne', 'Geist', 'Manrope', 'Outfit', 'Bodoni Moda', 'Azeret Mono', 'Chakra Petch', 'Unbounded', 'Space Mono', 'Oxanium'] },
+    displayFont: { label: 'Display font', value: 'Manrope', options: ['JetBrains Mono', 'Space Grotesk', 'Syne', 'Geist', 'Manrope', 'Outfit', 'Bodoni Moda', 'Azeret Mono', 'Chakra Petch', 'Unbounded', 'Space Mono', 'Oxanium'] },
     detailFont: { label: 'Small labels', value: 'IBM Plex Mono', options: ['IBM Plex Mono', 'Geist'] },
   };
 }
@@ -73,17 +73,17 @@ export function gridControls() {
 export function glassControls() {
   return {
     environment: { label: 'Environment', value: 'Studio HDR', options: ['Studio HDR', 'Soft room'] },
-    environmentRotation: { label: 'HDR rotation', value: 35, min: 0, max: 360, step: 1 },
-    reflections: { label: 'Reflections', value: 1.3, min: 0, max: 4, step: 0.05 },
-    ior: { label: 'Refraction', value: 1.4, min: 1.05, max: 2.4, step: 0.01 },
-    thickness: { label: 'Optical depth', value: 1.4, min: 0.1, max: 4, step: 0.05 },
-    roughness: { label: 'Roughness', value: 0.025, min: 0, max: 0.3, step: 0.005 },
-    dispersion: { label: 'Dispersion', value: 6, min: 0, max: 16, step: 0.1 },
-    glassTint: { label: 'Glass tint', value: '#ffffff' },
-    distortion: { label: 'Distortion', value: 0.04, min: 0, max: 0.5, step: 0.01 },
+    environmentRotation: { label: 'HDR rotation', value: 360, min: 0, max: 360, step: 1 },
+    reflections: { label: 'Reflections', value: 3.65, min: 0, max: 4, step: 0.05 },
+    ior: { label: 'Refraction', value: 1.25, min: 1.05, max: 2.4, step: 0.01 },
+    thickness: { label: 'Optical depth', value: 0.2, min: 0.1, max: 4, step: 0.05 },
+    roughness: { label: 'Roughness', value: 0, min: 0, max: 0.3, step: 0.005 },
+    dispersion: { label: 'Dispersion', value: 16, min: 0, max: 16, step: 0.1 },
+    glassTint: { label: 'Glass tint', value: '#cbd2de' },
+    distortion: { label: 'Distortion', value: 0.29, min: 0, max: 0.5, step: 0.01 },
     backside: { label: 'Back-face pass', value: true },
-    depth: { label: 'Extrusion', value: 0.22, min: 0.05, max: 0.5, step: 0.01 },
-    bevel: { label: 'Bevel', value: 0.012, min: 0.002, max: 0.035, step: 0.001 },
+    depth: { label: 'Extrusion', value: 0.19, min: 0.05, max: 0.5, step: 0.01 },
+    bevel: { label: 'Bevel', value: 0.02, min: 0.002, max: 0.035, step: 0.001 },
   };
 }
 

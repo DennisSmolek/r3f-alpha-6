@@ -43,10 +43,10 @@ export function useGroundCursor() {
     raycaster.setFromCamera(ndc, camera);
     return raycaster.ray.intersectPlane(ground, new Vector3()) ?? undefined;
   };
-  /** The ground points under the pointer and under a press since the previous read. */
+  /** The ground points under the pointer and under a press since the previous read, plus the pointer in screen space. */
   return () => {
     const { ndc, press } = state.current;
     state.current.press = null;
-    return { point: onGround(ndc), press: onGround(press) };
+    return { point: onGround(ndc), press: onGround(press), ndc };
   };
 }

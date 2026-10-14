@@ -15,6 +15,7 @@ import {
   mix,
   pow,
   max,
+  min,
   abs,
   select,
   div,
@@ -236,17 +237,22 @@ export function createMtmVolumeRefraction(
     const iorG = iorVal;
     const iorB = iorVal.add(halfSpread);
 
-    const refractionLod = backdropFootprintLod(
-      refractionCoordsFor(
-        n,
-        v,
-        iorVal,
-        thicknessVal,
-        position,
-        modelMatrix,
-        viewMatrix,
-        projMatrix,
+    // Silhouette pixels see huge screen-space derivatives. Capping the level keeps their blurry mips from
+    // bleeding into the glass, which would shimmer as the camera moves.
+    const refractionLod = min(
+      backdropFootprintLod(
+        refractionCoordsFor(
+          n,
+          v,
+          iorVal,
+          thicknessVal,
+          position,
+          modelMatrix,
+          viewMatrix,
+          projMatrix,
+        ),
       ),
+      float(1.5),
     );
 
     const basisUp = abs(n.z)

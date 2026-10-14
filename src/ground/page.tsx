@@ -40,7 +40,7 @@ export default function GroundPage() {
           <Canvas frameloop={player.paused && (!settings.animate || player.reducedMotion) && (settings.cameraMode !== 'Pointer' || player.reducedMotion || settings.parallax === 0) ? 'demand' : 'always'} onCreated={({ renderer }) => {
             traceStartup('Canvas ready', 0.6);
             if (!(renderer as unknown as { backend?: { isWebGPUBackend?: boolean } }).backend?.isWebGPUBackend) onError(new Error('A native WebGPU backend is required'));
-          }} camera={{ fov: 30, position: [0, 900, 1500] }} dpr={[1, 1.75]} renderer={{ antialias: true, alpha: false, toneMapping: NoToneMapping, shadows: true }}>
+          }} camera={{ fov: 30, position: [0, 900, 1500] }} dpr={[1, 1.25]} renderer={{ antialias: true, alpha: false, toneMapping: NoToneMapping, shadows: true }}>
             <Suspense fallback={null}><GroundScene settings={settings} onCameraPose={setCameraPose} playback={player.playback} onReady={player.onReady} onError={onError} /></Suspense>
           </Canvas>
         </SceneBoundary>

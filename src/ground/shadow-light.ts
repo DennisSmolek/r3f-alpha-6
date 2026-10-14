@@ -5,10 +5,10 @@ import { DirectionalLight, Group, Mesh, MeshBasicNodeMaterial } from 'three/webg
  * The light only sees layer 2, where `shadowCaster` places stand-ins for the glass.
  */
 export function createShadowLight(span: number) {
-  const light = new DirectionalLight('#fff6ea', 1);
+  const light = new DirectionalLight('#fff6ea', 6);
   light.position.set(-span * 0.3, span, span * 0.45);
   light.castShadow = true;
-  light.shadow.mapSize.set(2048, 2048);
+  light.shadow.mapSize.set(1024, 1024);
   light.shadow.radius = 4;
   light.shadow.bias = -0.0005;
   const camera = light.shadow.camera;

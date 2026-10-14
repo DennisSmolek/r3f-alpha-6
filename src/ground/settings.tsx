@@ -4,13 +4,13 @@ import { backgroundControls, cameraControls, exportSettings, fractureControls, g
 import type { BackgroundSettings, CameraSettings, FractureSettings, GlassSettings, GridSettings, TypographySettings } from '../controls';
 
 export type GroundSettings = CameraSettings & TypographySettings & BackgroundSettings & GridSettings & GlassSettings & FractureSettings & {
-  shadowOpacity: number; copyStretch: number; footerOnGround: boolean;
+  shadowOpacity: number; shaderGround: boolean; lightFollow: number; hdrFollow: number; lightIntensity: number; environmentIntensity: number; lift: number; copyStretch: number; footerOnGround: boolean;
   windup: number; gravity: number; bounce: number; friction: number; shardCollisions: boolean; cursorCollider: boolean; cursorSize: number;
 };
 
 export function useGroundSettings() {
   const actions = useRef({ export: () => {}, resetCamera: () => {} });
-  const camera: CameraSettings = { cameraMode: 'Pointer', cameraYaw: 0, cameraPitch: 30, cameraZoom: 1, parallax: 1, pointerX: 8, pointerY: 5, cameraSmoothing: 6, orbitSpeed: 0.5 };
+  const camera: CameraSettings = { cameraMode: 'Pointer', cameraYaw: 0.1, cameraPitch: 65.2, cameraZoom: 0.91, parallax: 0.25, pointerX: 8, pointerY: 5, cameraSmoothing: 2, orbitSpeed: 0.5 };
   const [values, set] = useControls(() => ({
     'Export settings': button(() => actions.current.export()),
     'Open flat layout': button(() => { location.href = 'flat.html'; }),
@@ -18,12 +18,25 @@ export function useGroundSettings() {
     Typography: folder(typographyControls(), { collapsed: true }),
     Ground: folder({
       ...backgroundControls(),
+      // Without the shader the floor is this one flat color, so it is the page background.
+      animate: { label: 'Animate scene', value: false },
+      baseColor: { label: 'Background color', value: '#c0c1c1' },
       ...gridControls(),
-      shadowOpacity: { label: 'Shadow', value: 0.5, min: 0, max: 1, step: 0.01 },
-      copyStretch: { label: 'Copy stretch', value: 0.35, min: 0, max: 1, step: 0.01 },
-      footerOnGround: { label: 'Footer on ground', value: true },
+      gridColor: { label: 'Grid color', value: '#000000' },
+      gridOpacity: { label: 'Grid opacity', value: 0.13, min: 0, max: 0.7, step: 0.01 },
+      shaderGround: { label: 'Shader background', value: false },
+      shadowOpacity: { label: 'Shadow', value: 0.18, min: 0, max: 1, step: 0.01 },
+      copyStretch: { label: 'Copy stretch', value: 0.36, min: 0, max: 1, step: 0.01 },
+      footerOnGround: { label: 'Footer on ground', value: false },
     }, { collapsed: true }),
-    'Glass & lighting': folder(glassControls(), { collapsed: true }),
+    'Glass & lighting': folder({
+      ...glassControls(),
+      lift: { label: 'Lift off ground (em)', value: 0.02, min: 0, max: 2, step: 0.01 },
+      lightIntensity: { label: 'Light intensity', value: 6, min: 0, max: 6, step: 0.05 },
+      environmentIntensity: { label: 'Environment intensity', value: 1.75, min: 0, max: 4, step: 0.05 },
+      hdrFollow: { label: 'HDR follows cursor', value: 0.43, min: 0, max: 1, step: 0.01 },
+      lightFollow: { label: 'Light follows cursor', value: 1, min: 0, max: 1, step: 0.01 },
+    }, { collapsed: true }),
     'Strike & shards': folder({
       ...fractureControls(),
       windup: { label: 'Wind-up (em)', value: 1.1, min: 0.3, max: 2.5, step: 0.05 },

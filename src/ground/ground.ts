@@ -5,13 +5,13 @@ import { gridPattern } from '../grid';
 import type { GroundSettings } from './settings';
 
 /**
- * The floor the glass stands on. It carries the grain gradient and grid in world space, fades into a flat
+ * The floor the glass lies on. It carries the grain gradient and grid in world space, fades into a flat
  * horizon, and catches shadows from the letters and shards.
  */
 export function createGround(width: number, height: number, extent: number) {
   const root = new Group();
   const reveal = uniform(0), gridAlpha = uniform(0.2), cellSize = uniform(48), gridColor = uniform(new Color());
-  const crosshairOpacity = uniform(1), crosshairSpacing = uniform(4), horizon = uniform(new Color()), base = new Color();
+  const shader = uniform(0), crosshairOpacity = uniform(1), crosshairSpacing = uniform(4), horizon = uniform(new Color()), base = new Color();
   const world = positionWorld.xz;
   // One unit per viewport height, with far ground at the top like the flat layout's gradient.
   const field = grainGradient(vec2(world.x, world.y.negate()).div(height), screenCoordinate.xy.div(screenSize).mul(vec2(width, height)).mul(0.7));
@@ -22,7 +22,8 @@ export function createGround(width: number, height: number, extent: number) {
   const reach = Math.max(width, height);
   const lines = gridPattern(world, cellSize, crosshairSpacing, crosshairOpacity).mul(smoothstep(reach, reach * 0.4, world.length())).mul(gridAlpha);
   const material = new MeshBasicNodeMaterial({ toneMapped: false });
-  material.colorNode = mix(mix(surface, gridColor, lines), horizon, smoothstep(extent * 0.12, extent * 0.5, world.length()));
+  // The grain shader is optional. Without it the floor is the flat base color.
+  material.colorNode = mix(mix(mix(horizon, surface, shader), gridColor, lines), horizon, smoothstep(extent * 0.12, extent * 0.5, world.length()));
   const geometry = new PlaneGeometry(extent * 2, extent * 2);
   const floor = new Mesh(geometry, material);
   floor.rotation.x = -Math.PI / 2;
@@ -39,6 +40,7 @@ export function createGround(width: number, height: number, extent: number) {
     update(settings: GroundSettings, light: number) {
       field.update(settings);
       reveal.value = light;
+      shader.value = settings.shaderGround ? 1 : 0;
       horizon.value.set('#0a0b0f').lerp(base.set(settings.baseColor), light);
       gridAlpha.value = settings.grid ? settings.gridOpacity * (0.45 + 0.55 * light) : 0;
       cellSize.value = settings.gridSize;

@@ -1,7 +1,7 @@
 import { Quaternion, Vector3, type BufferGeometry } from 'three/webgpu';
 
 export type Shard = { geometry: BufferGeometry; position: Vector3; velocity: Vector3; spin: Vector3; delay: number };
-/** A standing letter that slides along x. Shards collide with its box. */
+/** A letter that slides along x. Shards collide with its box. */
 export type Obstacle = { min: Vector3; max: Vector3; offset: (t: number) => number };
 export type PhysicsOptions = { duration: number; gravity: number; bounce: number; friction: number; collide: boolean };
 /** A kinematic sphere such as the cursor. Shards that touch it are pushed along with its velocity. */
@@ -13,11 +13,11 @@ export type Body = {
   delay: number; released: boolean; asleep: boolean; still: number;
 };
 
-/** Convex hull of the shard outline in xy, extruded to both faces. These points touch the ground, letters and pushers. */
+/** Convex hull of the shard outline on the ground (xz), extruded to both faces. These points touch the ground, letters and pushers. */
 function hullPoints(geometry: BufferGeometry) {
   const position = geometry.getAttribute('position');
   const flat: [number, number][] = [];
-  for (let i = 0; i < position.count; i++) flat.push([position.getX(i), position.getY(i)]);
+  for (let i = 0; i < position.count; i++) flat.push([position.getX(i), position.getZ(i)]);
   flat.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const cross = (o: number[], a: number[], b: number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
   const lower: [number, number][] = [], upper: [number, number][] = [];
@@ -34,18 +34,18 @@ function hullPoints(geometry: BufferGeometry) {
   hull.forEach((p, i) => { const n = hull[(i + 1) % hull.length]; area += p[0] * n[1] - n[0] * p[1]; });
   geometry.computeBoundingBox();
   const box = geometry.boundingBox!;
-  return { area: Math.abs(area) / 2, size: box.getSize(new Vector3()), points: hull.flatMap(([x, y]) => [new Vector3(x, y, box.min.z), new Vector3(x, y, box.max.z)]) };
+  return { area: Math.abs(area) / 2, size: box.getSize(new Vector3()), points: hull.flatMap(([x, z]) => [new Vector3(x, box.min.y, z), new Vector3(x, box.max.y, z)]) };
 }
 
 /** A resting rigid body for a shard at its unbroken position. */
 export function createBody(shard: Shard): Body {
   const { area, size, points } = hullPoints(shard.geometry);
-  const mass = Math.max(area * size.z, 1e-5);
+  const mass = Math.max(area * size.y, 1e-5);
   return {
     x: shard.position.clone(), q: new Quaternion(), v: new Vector3(), w: new Vector3(),
     invMass: 1 / mass,
     invInertia: new Vector3(12 / (mass * (size.y ** 2 + size.z ** 2)), 12 / (mass * (size.x ** 2 + size.z ** 2)), 12 / (mass * (size.x ** 2 + size.y ** 2))),
-    points, radius: Math.max(size.z / 2, Math.min(size.x, size.y) * 0.45), reach: size.length() / 2,
+    points, radius: Math.max(size.y / 2, Math.min(size.x, size.z) * 0.45), reach: size.length() / 2,
     delay: shard.delay, released: false, asleep: false, still: 0,
   };
 }

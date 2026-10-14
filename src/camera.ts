@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
-import { MathUtils, Vector2 } from 'three/webgpu';
+import { MathUtils, Vector2, Vector3 } from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { CameraSettings } from './controls';
 import type { Playback } from './shell/use-playback';
 
+const origin = new Vector3();
 type CameraPose = Pick<CameraSettings, 'cameraYaw' | 'cameraPitch' | 'cameraZoom'>;
 
 /**
@@ -23,7 +24,10 @@ export function useCameraRig(settings: CameraSettings, playback: React.RefObject
   useEffect(() => {
     const orbit = new OrbitControls(camera, renderer.domElement);
     controls.current = orbit;
-    orbit.enablePan = false;
+    // Panning slides along the ground instead of the screen plane. Wheel zoom is only for the orthographic flat layout.
+    orbit.enablePan = camera.type === 'PerspectiveCamera';
+    orbit.screenSpacePanning = false;
+    orbit.enableZoom = camera.type !== 'PerspectiveCamera';
     orbit.enableDamping = false;
     orbit.minAzimuthAngle = MathUtils.degToRad(-60);
     orbit.maxAzimuthAngle = MathUtils.degToRad(60);
@@ -50,6 +54,8 @@ export function useCameraRig(settings: CameraSettings, playback: React.RefObject
       );
       invalidate();
     };
+    const hold = (event: WheelEvent) => event.preventDefault();
+    renderer.domElement.addEventListener('wheel', hold, { passive: false });
     window.addEventListener('pointermove', move, { passive: true });
     renderer.domElement.addEventListener('pointerleave', reset);
     window.addEventListener('blur', reset);
@@ -58,6 +64,7 @@ export function useCameraRig(settings: CameraSettings, playback: React.RefObject
       orbit.removeEventListener('end', save);
       orbit.dispose();
       controls.current = null;
+      renderer.domElement.removeEventListener('wheel', hold);
       window.removeEventListener('pointermove', move);
       renderer.domElement.removeEventListener('pointerleave', reset);
       window.removeEventListener('blur', reset);
@@ -68,16 +75,19 @@ export function useCameraRig(settings: CameraSettings, playback: React.RefObject
   useEffect(() => {
     const orbit = controls.current;
     if (!orbit) return;
-    orbit.enabled = settings.cameraMode === 'Orbit';
+    // The flat layout's orthographic camera keeps its old behavior: live only in Orbit mode.
+    orbit.enabled = camera.type === 'PerspectiveCamera' || settings.cameraMode === 'Orbit';
+    // Dragging only rotates in Orbit mode. Pan stays live in every mode.
+    orbit.enableRotate = settings.cameraMode === 'Orbit';
     orbit.rotateSpeed = settings.orbitSpeed;
-    renderer.domElement.style.cursor = orbit.enabled ? 'grab' : '';
+    renderer.domElement.style.cursor = orbit.enableRotate ? 'grab' : '';
     renderer.domElement.style.touchAction = orbit.enabled ? 'none' : 'auto';
     offset.current.set(0, 0);
     pointer.current.set(0, 0);
-    camera.position.setFromSphericalCoords(distance, MathUtils.degToRad(90 - settings.cameraPitch), MathUtils.degToRad(settings.cameraYaw));
+    camera.position.setFromSphericalCoords(distance, MathUtils.degToRad(90 - settings.cameraPitch), MathUtils.degToRad(settings.cameraYaw)).add(orbit.target);
     camera.zoom = settings.cameraZoom;
     camera.updateProjectionMatrix();
-    camera.lookAt(0, 0, 0);
+    camera.lookAt(orbit.target);
     orbit.update();
     invalidate();
   }, [camera, renderer, invalidate, distance, settings.cameraMode, settings.cameraYaw, settings.cameraPitch, settings.cameraZoom, settings.orbitSpeed]);
@@ -89,10 +99,11 @@ export function useCameraRig(settings: CameraSettings, playback: React.RefObject
       const blend = 1 - Math.exp(-s.cameraSmoothing * Math.min(delta, 0.05));
       offset.current.x = MathUtils.lerp(offset.current.x, pointer.current.x * s.pointerX * strength, blend);
       offset.current.y = MathUtils.lerp(offset.current.y, pointer.current.y * s.pointerY * strength, blend);
+      const target = controls.current?.target ?? origin;
       camera.position.setFromSphericalCoords(distance,
         MathUtils.degToRad(90 - MathUtils.clamp(s.cameraPitch + offset.current.y, pointerPitch[0], pointerPitch[1])),
-        MathUtils.degToRad(MathUtils.clamp(s.cameraYaw + offset.current.x, -80, 80)));
-      camera.lookAt(0, 0, 0);
+        MathUtils.degToRad(MathUtils.clamp(s.cameraYaw + offset.current.x, -80, 80))).add(target);
+      camera.lookAt(target);
     }
     camera.updateMatrixWorld();
   };

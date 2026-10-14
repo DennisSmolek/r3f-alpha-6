@@ -1,4 +1,4 @@
-import { ExtrudeGeometry, Path, Shape, ShapePath, Vector2, Vector3 } from 'three/webgpu';
+import { ExtrudeGeometry, Path, Shape, ShapePath, Vector2, Vector3, type BufferGeometry } from 'three/webgpu';
 import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
 import polygonClipping, { type Pair, type Polygon } from 'polygon-clipping';
 import type { GlyphLayoutInspection } from '@pmndrs/glyph';
@@ -75,6 +75,16 @@ export function extrude(shapes: Shape[], bevel = 0.012, depth = 0.22, smooth = t
     toCreasedNormals(geometry, Math.PI / 3);
     geometry.scale(0.01, 0.01, 0.01);
   }
+  geometry.computeBoundingBox();
+  return geometry;
+}
+
+/** Turns standing glyph extrusion onto the ground so the letter faces point up. */
+export function sitOnGround(geometry: BufferGeometry) {
+  geometry.rotateX(-Math.PI / 2);
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox!;
+  geometry.translate(0, -box.min.y, -(box.min.z + box.max.z) / 2);
   geometry.computeBoundingBox();
   return geometry;
 }

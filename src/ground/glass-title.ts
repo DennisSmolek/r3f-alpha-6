@@ -17,9 +17,10 @@ import type { GroundSettings } from './settings';
  * `duration` is how long the choreography runs after the strike. `fit` gives the world scale for a word
  * width, so the title grows from fitting `<Canvas renderer />` to fitting `<Canvas />` on narrow screens. Once it ends the shards switch to a live
  * simulation where a cursor sphere sweeps them and a click pops them up.
- * `keepClear` is a box on the ground, in world units from the title's position, that shards bounce off. The fracture and bake run in a worker, and `onShatter` fires when the shards arrive.
+ * `keepClear` is a box on the ground, in world units from the title's position, that shards bounce off. The fracture and bake run in a worker.
+ * `compile` prepares the GPU for the shards when they arrive, and the opening holds until it finishes so the strike never stalls.
  */
-export function createGlassTitle(typography: Typography, material: Material, settings: GroundSettings, duration: number, fit: (width: number) => number, keepClear: Box3 | undefined, onShatter: () => void) {
+export function createGlassTitle(typography: Typography, material: Material, settings: GroundSettings, duration: number, fit: (width: number) => number, keepClear: Box3 | undefined, compile: (shards: Group) => Promise<unknown>) {
   const { depth, bevel, fractureSeed, fragmentCount } = settings;
   const root = new Group(), intact = new Group(), shardGroup = new Group(), tag = new Group();
   root.add(intact, shardGroup, tag);
@@ -81,7 +82,7 @@ export function createGlassTitle(typography: Typography, material: Material, set
   let pose: ReturnType<typeof tagPose> | undefined, poseKey = '';
   let live: ShardLive | undefined, last: Vector3 | undefined;
   const pusher: Pusher = { center: new Vector3(), velocity: new Vector3(), radius: 1 };
-  let worker: Worker | undefined, baked: ReturnType<typeof bakeShards> | undefined, physicsKey = '', warm = false;
+  let worker: Worker | undefined, baked: ReturnType<typeof bakeShards> | undefined, physicsKey = '', warm = false, compiled = false;
   let shards: { mesh: Object3D; geometry: BufferGeometry }[] = [];
   /** Breaks `renderer` off the main thread and swaps in the new shards when they arrive. */
   const shatter = (physics: ShatterJob['physics']) => {
@@ -106,7 +107,9 @@ export function createGlassTitle(typography: Typography, material: Material, set
       live = undefined;
       warm = true;
       traceStartup('Shards ready');
-      onShatter();
+      // Compiling skips hidden objects. The next update hides the shards again.
+      shardGroup.visible = true;
+      compile(shardGroup).then(() => { compiled = true; });
     };
     worker.postMessage(request);
   };
@@ -158,8 +161,8 @@ export function createGlassTitle(typography: Typography, material: Material, set
       });
       return live?.awake() ?? false;
     },
-    /** True once the first shards have arrived. */
-    get shattered() { return !!baked; },
+    /** True once the first shards have arrived and compiled. */
+    get shattered() { return compiled; },
     dispose() {
       worker?.terminate();
       [...geometries, ...shards.map(({ geometry }) => geometry)].forEach(geometry => geometry.dispose());

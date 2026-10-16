@@ -40,6 +40,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   const live = useRef(settings);
   live.current = settings;
   const clock = useRef({ atmosphere: 0, flow: 0 });
+  const startup = useRef({ compiled: false, frames: 0 });
   // The pointer eased in screen space, from -1 to 1. It swings the HDR and the key light.
   const aim = useRef(new Vector2());
   const parts = useRef<{
@@ -100,7 +101,8 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     const headline = Math.min(size.width < 650 ? size.width * 0.087 : 50, size.height * 0.065);
     const keepClear = new Box3();
     for (const x of [-1, 1]) for (const y of [-1, 1]) keepClear.expandByPoint(layout.at(x * headline * 4.5, -size.height * 0.182 + y * headline * 1.8).sub(titleAt));
-    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime, width => Math.min(size.width * 0.97 / width, size.height * 0.5) * titlePixel, keepClear, invalidate);
+    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime, width => Math.min(size.width * 0.97 / width, size.height * 0.5) * titlePixel, keepClear,
+      shards => (renderer as WebGPURenderer).compileAsync(shards, camera, scene).then(() => invalidate(), onError));
     title.root.position.copy(titleAt);
     scene.add(title.root);
     parts.current.glass = glass;
@@ -112,7 +114,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
       parts.current.title = parts.current.glass = undefined;
     };
   // Title rebuilds follow the geometry settings, not every panel change.
-  }, [renderer, scene, camera, invalidate, typography, size.width, size.height, depth, bevel, fractureSeed, fragmentCount, titleAt.x, titleAt.z, titlePixel]);
+  }, [renderer, scene, camera, invalidate, onError, typography, size.width, size.height, depth, bevel, fractureSeed, fragmentCount, titleAt.x, titleAt.z, titlePixel]);
 
   useLayoutEffect(() => {
     const copy = createGroundCopy(typography, live.current, onError, groundLayout(size.width, size.height, fov, distance, cameraPitch), size.width, size.height);
@@ -129,13 +131,13 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   useLayoutEffect(() => {
     traceStartup('Compiling ground scene', 0.95);
     let alive = true;
-    // Compile the complete page before releasing the intro clock.
+    // Compile the complete page before releasing the intro clock. The frame loop finishes the startup.
     // Skip effects torn down by StrictMode before starting asynchronous GPU work.
     Promise.resolve().then(() => alive ? (renderer as WebGPURenderer).compileAsync(scene, camera) : undefined).then(() => {
-      if (alive) { traceStartup('Scene ready', 1); onReady(); }
+      if (alive) { traceStartup('Scene compiled'); startup.current.compiled = true; }
     }).catch(error => { if (alive) onError(error); });
     return () => { alive = false; };
-  }, [renderer, scene, camera, onReady, onError]);
+  }, [renderer, scene, camera, onError]);
 
   useFrame(state => {
     const p = playback.current;
@@ -175,10 +177,15 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     glyph.shape();
     const { reflections, key: sun } = parts.current;
     // Every other frame is plenty for reflections.
-    if (reflections && title && copy && sun && p.ready && (parts.current.frame = (parts.current.frame ?? 0) + 1) % 2 === 0) {
+    if (reflections && title && copy && sun && (parts.current.frame = (parts.current.frame ?? 0) + 1) % 2 === 0) {
       scene.environment = reflections.update(title.root.position.clone().setY(titlePixel * 30), [title.root, copy.screen], [sun.light], s.environmentRotation + aim.current.x * s.hdrFollow * 70, s.environmentIntensity);
     }
-    if (p.ready) captureTransmissionBackdrop(renderer, scene, camera, state.elapsed);
+    captureTransmissionBackdrop(renderer, scene, camera, state.elapsed);
+    // Every pass draws a few frames behind the loader so first-use stalls and the reflection lighting settle before the intro starts.
+    if (!p.ready) {
+      invalidate();
+      if (startup.current.compiled && title?.shattered && ++startup.current.frames > 4) { traceStartup('Scene ready', 1); onReady(); }
+    }
   }, { priority: 1 });
   return null;
 }

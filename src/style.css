@@ -28,7 +28,7 @@ button.hit-area { padding: 0; border: 0; background: transparent; color: inherit
 .timeline::-moz-range-thumb { border: none; background: transparent; }
 .credits { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 510px; display: grid; grid-template-columns: 90px 70px 150px 70px 130px; }
 .credits a { height: 38px; }
-.loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 26px; background: #383837; color: #d1d0cd; transition: opacity .6s .25s, visibility 0s .85s; }
+.loading { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 26px; background: #383837; color: #d1d0cd; transition: opacity .6s .25s, visibility 0s .85s; }
 .loading svg { width: 36.52px; height: 36.52px; }
 .loading-bar { width: 120px; height: 2px; background: #d1d0cd2e; overflow: hidden; }
 .loading-bar span { display: block; height: 100%; background: #ed582c; transform: scaleX(var(--progress, 0)); transform-origin: left; transition: transform 1.6s cubic-bezier(.15, .8, .3, 1); }

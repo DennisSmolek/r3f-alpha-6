@@ -2,7 +2,7 @@ import { traceStartup } from '../startup';
 import { use, useDeferredValue, useEffect, useLayoutEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { glyph } from '@pmndrs/glyph';
-import { MathUtils, Vector2, Vector3, type DirectionalLight, type PerspectiveCamera, type WebGPURenderer } from 'three/webgpu';
+import { Box3, MathUtils, Vector2, Vector3, type DirectionalLight, type PerspectiveCamera, type WebGPURenderer } from 'three/webgpu';
 import { useCameraRig } from '../camera';
 import { loadTypography } from '../typography';
 import { createEnvironmentMap, studioReady } from '../environment';
@@ -13,6 +13,7 @@ import { ease } from '../timeline';
 import type { Playback } from '../shell/use-playback';
 import { animationDuration, choreographyTime, impactTime } from './choreography';
 import { groundLayout } from './layout';
+import { createReflections } from './reflections';
 import { createGround } from './ground';
 import { createShadowLight } from './shadow-light';
 import { createGlassTitle } from './glass-title';
@@ -43,6 +44,7 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   const aim = useRef(new Vector2());
   const parts = useRef<{
     key?: { light: DirectionalLight; home: Vector3 };
+    reflections?: ReturnType<typeof createReflections>; frame?: number;
     ground?: ReturnType<typeof createGround>; title?: ReturnType<typeof createGlassTitle>;
     copy?: ReturnType<typeof createGroundCopy>; glass?: ReturnType<typeof createGlass>;
   }>({});
@@ -61,9 +63,11 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
   useLayoutEffect(() => {
     const map = createEnvironmentMap(renderer as WebGPURenderer, studio, environment);
     const previous = scene.environment;
+    // The plain environment shows until the first reflection capture replaces it.
     scene.environment = map.texture;
-    return () => { scene.environment = previous; map.dispose(); };
-  }, [renderer, scene, studio, environment]);
+    parts.current.reflections = createReflections(renderer as WebGPURenderer, scene, map.texture, distance * 20);
+    return () => { scene.environment = previous; parts.current.reflections?.dispose(); parts.current.reflections = undefined; map.dispose(); };
+  }, [renderer, scene, studio, environment, distance]);
 
   useLayoutEffect(() => {
     const projection = camera as PerspectiveCamera;
@@ -92,7 +96,11 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     const glass = createGlass(renderer, scene, camera);
     // The backdrop pass shows the horizon wherever no ground is drawn.
     glass.config.background = parts.current.ground?.horizon;
-    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime, width => Math.min(size.width * 0.97 / width, size.height * 0.5) * titlePixel, invalidate);
+    // The "WebGPU First" headline sits at the same screen spot as in the ground copy. Shards bounce off its footprint.
+    const headline = Math.min(size.width < 650 ? size.width * 0.087 : 50, size.height * 0.065);
+    const keepClear = new Box3();
+    for (const x of [-1, 1]) for (const y of [-1, 1]) keepClear.expandByPoint(layout.at(x * headline * 4.5, -size.height * 0.182 + y * headline * 1.8).sub(titleAt));
+    const title = createGlassTitle(typography, glass.material, live.current, animationDuration(0) - impactTime, width => Math.min(size.width * 0.97 / width, size.height * 0.5) * titlePixel, keepClear, invalidate);
     title.root.position.copy(titleAt);
     scene.add(title.root);
     parts.current.glass = glass;
@@ -151,8 +159,9 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     aim.current.lerp(target as Vector2, 1 - Math.exp(-4 * Math.min(state.delta, 0.05)));
     if (aim.current.distanceToSquared(target as Vector2) > 1e-5) invalidate();
     const swing = aim.current.x * s.lightFollow;
-    scene.environmentRotation.set(0, (s.environmentRotation + aim.current.x * s.hdrFollow * 70) * Math.PI / 180, 0);
-    scene.environmentIntensity = s.environmentIntensity;
+    // The reflection dome applies the environment rotation and intensity, so the scene's own stay neutral.
+    scene.environmentRotation.set(0, 0, 0);
+    scene.environmentIntensity = 1;
     const { key } = parts.current;
     if (key) {
       key.light.intensity = s.lightIntensity;
@@ -164,6 +173,11 @@ export function GroundScene({ playback, settings, onCameraPose, onReady, onError
     copy?.update(t, Math.min(1, p.time / animationDuration(s.breakDelay)), s);
     copy?.follow(camera as PerspectiveCamera, renderer.domElement);
     glyph.shape();
+    const { reflections, key: sun } = parts.current;
+    // Every other frame is plenty for reflections.
+    if (reflections && title && copy && sun && p.ready && (parts.current.frame = (parts.current.frame ?? 0) + 1) % 2 === 0) {
+      scene.environment = reflections.update(title.root.position.clone().setY(titlePixel * 30), [title.root, copy.screen], [sun.light], s.environmentRotation + aim.current.x * s.hdrFollow * 70, s.environmentIntensity);
+    }
     if (p.ready) captureTransmissionBackdrop(renderer, scene, camera, state.elapsed);
   }, { priority: 1 });
   return null;

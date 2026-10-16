@@ -17,9 +17,9 @@ import type { GroundSettings } from './settings';
  * `duration` is how long the choreography runs after the strike. `fit` gives the world scale for a word
  * width, so the title grows from fitting `<Canvas renderer />` to fitting `<Canvas />` on narrow screens. Once it ends the shards switch to a live
  * simulation where a cursor sphere sweeps them and a click pops them up.
- * The fracture and bake run in a worker, and `onShatter` fires when the shards arrive.
+ * `keepClear` is a box on the ground, in world units from the title's position, that shards bounce off. The fracture and bake run in a worker, and `onShatter` fires when the shards arrive.
  */
-export function createGlassTitle(typography: Typography, material: Material, settings: GroundSettings, duration: number, fit: (width: number) => number, onShatter: () => void) {
+export function createGlassTitle(typography: Typography, material: Material, settings: GroundSettings, duration: number, fit: (width: number) => number, keepClear: Box3 | undefined, onShatter: () => void) {
   const { depth, bevel, fractureSeed, fragmentCount } = settings;
   const root = new Group(), intact = new Group(), shardGroup = new Group(), tag = new Group();
   root.add(intact, shardGroup, tag);
@@ -75,6 +75,8 @@ export function createGlassTitle(typography: Typography, material: Material, set
     seed: fractureSeed, cells: fragmentCount, depth, duration,
     opening: opening.map(({ box, travel }) => ({ min: box.min.toArray(), max: box.max.toArray(), travel })),
     tag: { min: tagBox.min.toArray(), max: tagBox.max.toArray(), strike, travel: tagTravel },
+    // Into em units at the settled scale, as a wall tall enough that shards cannot fly over it.
+    clear: keepClear && { min: [keepClear.min.x / endScale, 0, keepClear.min.z / endScale], max: [keepClear.max.x / endScale, 1e3, keepClear.max.z / endScale] },
   };
   let pose: ReturnType<typeof tagPose> | undefined, poseKey = '';
   let live: ShardLive | undefined, last: Vector3 | undefined;

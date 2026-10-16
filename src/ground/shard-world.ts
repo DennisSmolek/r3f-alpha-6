@@ -1,7 +1,7 @@
 import { Quaternion, Vector3, type BufferGeometry } from 'three/webgpu';
 
 export type Shard = { geometry: BufferGeometry; position: Vector3; velocity: Vector3; spin: Vector3; delay: number };
-/** A letter that slides along x. Shards collide with its box. */
+/** A letter or wall that slides along x. Shards collide with its box. */
 export type Obstacle = { min: Vector3; max: Vector3; offset: (t: number) => number };
 export type PhysicsOptions = { duration: number; gravity: number; bounce: number; friction: number; collide: boolean };
 /** A kinematic sphere such as the cursor. Shards that touch it are pushed along with its velocity. */
@@ -137,7 +137,7 @@ export function createShardWorld(bodies: Body[], shards: Shard[], obstacles: Obs
         for (const obstacle of obstacles) {
           const shift = obstacle.offset(t);
           if (body.x.x + body.reach < obstacle.min.x + shift || body.x.x - body.reach > obstacle.max.x + shift
-            || body.x.y - body.reach > obstacle.max.y || Math.abs(body.x.z) - body.reach > Math.max(-obstacle.min.z, obstacle.max.z)) continue;
+            || body.x.y - body.reach > obstacle.max.y || body.x.z + body.reach < obstacle.min.z || body.x.z - body.reach > obstacle.max.z) continue;
           surface.set((obstacle.offset(t + dt) - obstacle.offset(t - dt)) / (2 * dt), 0, 0);
           for (const point of body.points) {
             r.copy(point).applyQuaternion(body.q);

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { button, folder, useControls } from 'leva';
 import { backgroundControls, cameraControls, exportSettings, fractureControls, glassControls, gridControls, typographyControls } from '../controls';
 import type { BackgroundSettings, CameraSettings, FractureSettings, GlassSettings, GridSettings, TypographySettings } from '../controls';
@@ -11,20 +11,21 @@ export type GroundSettings = CameraSettings & TypographySettings & BackgroundSet
 export function useGroundSettings() {
   const actions = useRef({ export: () => {}, resetCamera: () => {} });
   const camera: CameraSettings = { cameraMode: 'Pointer', cameraYaw: 0.1, cameraPitch: 65.2, cameraZoom: 0.91, parallax: 0.25, pointerX: 8, pointerY: 5, cameraSmoothing: 2, orbitSpeed: 0.5 };
+  // The shader's own controls only show while it is on, and it animates whenever it is on.
+  const { animate: _animate, baseColor: _baseColor, ...shader } = backgroundControls();
+  const shaderControls = Object.fromEntries(Object.entries(shader).map(([key, input]) => [key, { ...input, render: (get: (path: string) => unknown) => !!get('Ground.shaderGround') }]));
   const [values, set] = useControls(() => ({
     'Export settings': button(() => actions.current.export()),
-    'Open flat layout': button(() => { location.href = 'flat.html'; }),
     Camera: folder(cameraControls(camera, [14, 70], () => actions.current.resetCamera())),
     Typography: folder(typographyControls(), { collapsed: true }),
     Ground: folder({
-      ...backgroundControls(),
       // Without the shader the floor is this one flat color, so it is the page background.
-      animate: { label: 'Animate scene', value: false },
       baseColor: { label: 'Background color', value: '#c0c1c1' },
+      shaderGround: { label: 'Shader background', value: true },
+      ...shaderControls,
       ...gridControls(),
       gridColor: { label: 'Grid color', value: '#000000' },
       gridOpacity: { label: 'Grid opacity', value: 0.13, min: 0, max: 0.7, step: 0.01 },
-      shaderGround: { label: 'Shader background', value: false },
       shadowOpacity: { label: 'Shadow', value: 0.1, min: 0, max: 1, step: 0.01 },
       copyStretch: { label: 'Copy stretch', value: 0.36, min: 0, max: 1, step: 0.01 },
       footerOnGround: { label: 'Footer on ground', value: false },
@@ -48,7 +49,7 @@ export function useGroundSettings() {
       cursorSize: { label: 'Cursor size (em)', value: 0.3, min: 0.1, max: 1, step: 0.05 },
     }, { collapsed: true }),
   }), []);
-  const settings = values as GroundSettings;
+  const settings = useMemo(() => ({ ...values, animate: values.shaderGround }) as unknown as GroundSettings, [values]);
   actions.current.export = () => exportSettings(settings, 'r3f-alpha-6-settings.json');
   actions.current.resetCamera = () => set(camera);
   return { settings, setCameraPose: (pose: Pick<CameraSettings, 'cameraYaw' | 'cameraPitch' | 'cameraZoom'>) => set(pose) };

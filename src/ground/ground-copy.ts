@@ -108,7 +108,7 @@ export function createGroundCopy(typography: Typography, settings: GroundSetting
   foot('BUILT WITH', -w / 2 + 32, footY, 9, { align: 'left' }).visible = w > 800;
   foot('ALPHA 6', w / 2 - 32, footY, 9, { align: 'right' }).visible = w > 800;
 
-  return { root,
+  return { root, screen,
     /** `t` is choreography time and `amount` is overall intro progress from 0 to 1. */
     update(t: number, amount: number, settings: GroundSettings) {
       labels.theme.value = ease(t, impactTime + 0.05, impactTime + 1.2);

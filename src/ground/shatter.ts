@@ -11,6 +11,8 @@ type Box = { min: number[]; max: number[] };
 export type ShatterJob = {
   shapes: ShapeJSON[]; offset: number[]; word: Box; seed: number; cells: number; depth: number; duration: number;
   opening: (Box & { travel: number })[]; tag: Box & { strike: number; travel: number };
+  /** A column of ground the shards must stay out of, so the copy printed there stays readable. */
+  clear?: Box;
   physics: Pick<GroundSettings, 'windup' | 'explosion' | 'gravity' | 'bounce' | 'friction' | 'shardCollisions'>;
 };
 
@@ -19,13 +21,14 @@ export type ShatterResult = {
   track: Float32Array;
 };
 
-/** The remaining letters as obstacles. `<Canvas` glides toward `/>` while `/>` springs back from the strike. */
-export function titleObstacles({ opening, tag, physics }: ShatterJob): Obstacle[] {
+/** The remaining letters and the keep-clear column as obstacles. `<Canvas` glides toward `/>` while `/>` springs back from the strike. */
+export function titleObstacles({ opening, tag, clear, physics }: ShatterJob): Obstacle[] {
   const pose = tagPose(physics.windup, tag.strike, tag.travel);
   const box = ({ min, max }: Box) => ({ min: new Vector3().fromArray(min), max: new Vector3().fromArray(max) });
   return [
     ...opening.map(({ travel, ...bounds }, i) => ({ ...box(bounds), offset: (time: number) => travel * glide(time + impactTime, i, opening.length) })),
     { ...box(tag), offset: (time: number) => pose(time + impactTime).x },
+    ...(clear ? [{ ...box(clear), offset: () => 0 }] : []),
   ];
 }
 

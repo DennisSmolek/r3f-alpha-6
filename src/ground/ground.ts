@@ -1,5 +1,5 @@
 import { Color, Group, Mesh, MeshBasicNodeMaterial, PlaneGeometry } from 'three/webgpu';
-import { color, float, mix, positionWorld, screenCoordinate, screenSize, smoothstep, uniform, vec2 } from 'three/tsl';
+import { color, float, mix, positionWorld, smoothstep, uniform, vec2 } from 'three/tsl';
 import { grainGradient } from '../grain-gradient';
 import { gridPattern } from '../grid';
 import { CausticReceiverMaterial } from './caustics';
@@ -14,8 +14,9 @@ export function createGround(width: number, height: number, extent: number) {
   const reveal = uniform(0), gridAlpha = uniform(0.2), cellSize = uniform(48), gridColor = uniform(new Color());
   const shader = uniform(0), crosshairOpacity = uniform(1), crosshairSpacing = uniform(4), horizon = uniform(new Color()), base = new Color();
   const world = positionWorld.xz;
-  // One unit per viewport height, with far ground at the top like the flat layout's gradient.
-  const field = grainGradient(vec2(world.x, world.y.negate()).div(height), screenCoordinate.xy.div(screenSize).mul(vec2(width, height)).mul(0.7));
+  // One unit per viewport height, with far ground at the top like the flat layout's gradient. The grain reads
+  // the same world position, so it is printed on the floor and foreshortens with the camera.
+  const field = grainGradient(vec2(world.x, world.y.negate()).div(height), world.mul(0.7));
   // Calm the near ground where the copy sits.
   const calm = smoothstep(0.23, 0.55, world.y.negate().div(height).add(0.5)).mul(0.9).add(0.1);
   const colorField = mix(field.base, mix(field.base, field.gradient, field.mask), calm);
